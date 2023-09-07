@@ -14,6 +14,10 @@ from square.api.catalog_api import CatalogApi
 from dotenv import load_dotenv
 import os
 
+from order import Order
+
+ord = Order()
+
 load_dotenv()
 API_KEY = os.getenv("API_KEY")
 LOCATION = os.getenv("LOCATION")
@@ -26,14 +30,19 @@ client = Client(
 
 # note everything in here will in theory be able to be called by a end user.
 
-class GetLocationNameTool(BaseTool):
-    name="get_location_name_tool"
-    description="helpful for getting the name of the resturaunt"
+class GetOrderIdTool(BaseTool):
+    name="get_order_id_tool"
+    description="for getting the order id when a order has already been placed. Useful for checking current order and updating order when items are ordered."
     def _run(
-          self, location_id: str, run_manager: Optional[CallbackManagerForToolRun] = None
-      ) -> str:
-          """Test values"""
-          return "Hungry Harry's Dumplings"
+          self, run_manager: Optional[CallbackManagerForToolRun] = None
+    ) -> str:
+        """Test values"""
+        if ONGOING_ORDER:
+            return ORDER_ID
+        else:
+            return "ERROR: there is no current order id. Use create_new_order"
+
+
 
 class GetBasicMenuTool(BaseTool):
     name="get_basic_menu_tool"
@@ -87,7 +96,13 @@ class CreateOrderTool(BaseTool):
     def _run(
         self, item_id: str, quantity: str, run_manager: Optional[CallbackManagerForToolRun] = None
     ) -> str:    
-          return client.orders.create_order(body = {  "order": { "location_id": LOCATION, "line_items": [{"catalog_object_id" : item_id, "item_type": "ITEM", "quantity": quantity}]},"idempotency_key": str(uuid4().hex)})
+        result = client.orders.create_order(body = {  "order": { "location_id": LOCATION, "line_items": [{"catalog_object_id" : item_id, "item_type": "ITEM", "quantity": quantity}]},"idempotency_key": str(uuid4().hex)})
+        if result.is_success():
+            ONGOING_ORDER = True
+            ORDER_ID = result.body["order"]["id"]
+            return result.body
+        else:
+          return 
         
 class GetVerboseMenuTool(BaseTool):
     name="get_verbose_menu_tool"
