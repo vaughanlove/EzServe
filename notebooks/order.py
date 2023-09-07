@@ -1,7 +1,7 @@
-client = Client(
-    square_version='2023-08-16',
-    access_token=API_KEY,
-    environment='sandbox')
+#client = Client(
+#    square_version='2023-08-16',
+#    access_token=API_KEY,
+#    environment='sandbox')
 
 class Order:
     order_id = ''
@@ -9,7 +9,7 @@ class Order:
 
     order_items = []
     
-    def __init__():
+    def __init__(self):
         #self.menu = getMenu()
         pass
 

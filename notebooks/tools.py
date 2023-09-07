@@ -38,7 +38,7 @@ class GetOrderIdTool(BaseTool):
     ) -> str:
         """Test values"""
         if ONGOING_ORDER:
-            return ORDER_ID
+            return ord.order_id
         else:
             return "ERROR: there is no current order id. Use create_new_order"
 
@@ -52,15 +52,12 @@ class GetBasicMenuTool(BaseTool):
         self, run_manager: Optional[CallbackManagerForToolRun] = None
     ) -> str:
         """Get from square api"""
-        result = client.catalog.list_catalog(types = "ITEM" )
-        if result.is_success():
-            menu = []
-            for object in result.body['objects']:
-                menu.append(object['item_data']['name'])
-            return menu
-        elif result.is_error():
-          # todo error handling.
-          pass
+        #result = client.catalog.list_catalog(types = "ITEM" )
+        result = ord.menu
+        menu = []
+        for object in result['objects']:
+            menu.append(object['item_data']['name'])
+        return menu
         return "ERROR: cannot retrieve menu."
 
 class GetDetailedMenuTool(BaseTool):
@@ -71,16 +68,13 @@ class GetDetailedMenuTool(BaseTool):
         self, run_manager: Optional[CallbackManagerForToolRun] = None
     ) -> str:
         """Get from square api"""
-        result = client.catalog.list_catalog(types = "ITEM" )
-        if result.is_success():
-            menu = []
-            for object in result.body['objects']:
-                for variation in object['item_data']['variations']:
-                    menu.append(variation['item_variation_data']['name'] + ' ' + object['item_data']['name'])
-            return menu
-        elif result.is_error():
-          # todo error handling.
-          pass
+        #result = client.catalog.list_catalog(types = "ITEM" )
+        result = ord.menu
+        menu = []
+        for object in result['objects']:
+            for variation in object['item_data']['variations']:
+                menu.append(variation['item_variation_data']['name'] + ' ' + object['item_data']['name'])
+        return menu
         return "ERROR: cannot retrieve menu."
 
 
@@ -111,19 +105,17 @@ class GetVerboseMenuTool(BaseTool):
         self, args, run_manager: Optional[CallbackManagerForToolRun] = None
     ) -> str:
         """Get from square api"""
-        result = client.catalog.list_catalog(types = "ITEM" )
-        if result.is_success():
-            menu = {}
-            for object in result.body['objects']:
-                for variation in object['item_data']['variations']:
-                    menu[variation['item_variation_data']['name'] + ' ' + object['item_data']['name']] = {
-                        'item_id' : variation['id'],
-                        'price' : variation['item_variation_data']['price_money']['amount']                    
-                    }
-                return menu
-        elif result.is_error():
-          # todo error handling.
-          pass
+        #result = client.catalog.list_catalog(types = "ITEM" )
+        result = ord.menu
+        menu = {}
+        for object in result['objects']:
+            for variation in object['item_data']['variations']:
+                menu[variation['item_variation_data']['name'] + ' ' + object['item_data']['name']] = {
+                    'item_id' : variation['id'],
+                    'price' : variation['item_variation_data']['price_money']['amount']                    
+                }
+            return menu
+
         return []
 
         
@@ -139,8 +131,9 @@ class FindItemIdTool(BaseTool):
         self, name, run_manager: Optional[CallbackManagerForToolRun] = None
     ) -> str:
         """Get from square api"""
-        result = client.catalog.list_catalog(types = "ITEM" )
-        for object in result.body['objects']:
+        #result = client.catalog.list_catalog(types = "ITEM" )
+        result = ord.menu
+        for object in result['objects']:
             for variation in object['item_data']['variations']:
                 temp_item = (variation['item_variation_data']['name'] + ' ' + object['item_data']['name']).lower()
                 # TOdo some regex
@@ -158,21 +151,19 @@ class GetEntireMenuTool(BaseTool):
         self, args, run_manager: Optional[CallbackManagerForToolRun] = None
     ) -> str:
         """Get from square api"""
-        result = client.catalog.list_catalog(types = "ITEM" )
-        if result.is_success():
-            menu = {}
-            for object in result.body['objects']:
-                for variation in object['item_data']['variations']:
-                    menu[object['item_data']['name']] = {
-                        'type' : object['item_data']['name'],
-                        'modifiers' : variation['item_variation_data']['name'].split(','),
-                        'item_id' : variation['id'],
-                        'price' : variation['item_variation_data']['price_money']['amount']                    
-                    }
-                return menu
-        elif result.is_error():
-          # todo error handling.
-          pass
+        #result = client.catalog.list_catalog(types = "ITEM" )
+        result = ord.menu        
+        menu = {}
+        for object in result['objects']:
+            for variation in object['item_data']['variations']:
+                menu[object['item_data']['name']] = {
+                    'type' : object['item_data']['name'],
+                    'modifiers' : variation['item_variation_data']['name'].split(','),
+                    'item_id' : variation['id'],
+                    'price' : variation['item_variation_data']['price_money']['amount']                    
+                }
+            return menu
+   
         return []
         
          
