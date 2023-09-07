@@ -37,7 +37,7 @@ class GetLocationNameTool(BaseTool):
 
 class GetBasicMenuTool(BaseTool):
     name="get_basic_menu_tool"
-    description="helpful for listing the menu items when user requests. Not an exhaustive list and should not be used when ordering."
+    description="helpful for listing the basic menu items when user requests. important** should not be used when ordering."
     args_schema: Type[None] = None
     def _run(
         self, run_manager: Optional[CallbackManagerForToolRun] = None
@@ -47,9 +47,27 @@ class GetBasicMenuTool(BaseTool):
         if result.is_success():
             menu = []
             for object in result.body['objects']:
-                menu.append(
-                    {object['item_data']['name'] : object['item_data']['category_id']},                
-                )
+                menu.append(object['item_data']['name'])
+            return menu
+        elif result.is_error():
+          # todo error handling.
+          pass
+        return "ERROR: cannot retrieve menu."
+
+class GetDetailedMenuTool(BaseTool):
+    name="get_detailed_menu_tool"
+    description="helpful for listing the entire menu when details like size or flavor of an item are asked about. important** should not be used when ordering."
+    args_schema: Type[None] = None
+    def _run(
+        self, run_manager: Optional[CallbackManagerForToolRun] = None
+    ) -> str:
+        """Get from square api"""
+        result = client.catalog.list_catalog(types = "ITEM" )
+        if result.is_success():
+            menu = []
+            for object in result.body['objects']:
+                for variation in object['item_data']['variations']:
+                    menu.append(variation['item_variation_data']['name'] + ' ' + object['item_data']['name'])
             return menu
         elif result.is_error():
           # todo error handling.
