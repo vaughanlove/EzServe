@@ -14,11 +14,15 @@ from square.api.catalog_api import CatalogApi
 from dotenv import load_dotenv
 import os
 
+from order import Order
 load_dotenv()
+
+ord = Order()
+
 API_KEY = os.getenv("API_KEY")
 LOCATION = os.getenv("LOCATION")
 
-
+# want to get rid of this
 client = Client(
     square_version='2023-08-16',
     access_token=API_KEY,
@@ -26,14 +30,19 @@ client = Client(
 
 # note everything in here will in theory be able to be called by a end user.
 
-class GetLocationNameTool(BaseTool):
-    name="get_location_name_tool"
-    description="helpful for getting the name of the resturaunt"
+class GetOrderIdTool(BaseTool):
+    name="get_order_id_tool"
+    description="for getting the order id when a order has already been placed. Useful for checking current order and updating order when items are ordered."
     def _run(
-          self, location_id: str, run_manager: Optional[CallbackManagerForToolRun] = None
-      ) -> str:
-          """Test values"""
-          return "Hungry Harry's Dumplings"
+          self, run_manager: Optional[CallbackManagerForToolRun] = None
+    ) -> str:
+        """Test values"""
+        if ord.ONGOING:
+            return ord.ORDER_ID
+        else:
+            return "ERROR: there is no current order id. Use create_new_order"
+
+
 
 class GetBasicMenuTool(BaseTool):
     name="get_basic_menu_tool"
@@ -43,15 +52,12 @@ class GetBasicMenuTool(BaseTool):
         self, run_manager: Optional[CallbackManagerForToolRun] = None
     ) -> str:
         """Get from square api"""
-        result = client.catalog.list_catalog(types = "ITEM" )
-        if result.is_success():
-            menu = []
-            for object in result.body['objects']:
-                menu.append(object['item_data']['name'])
-            return menu
-        elif result.is_error():
-          # todo error handling.
-          pass
+        #result = client.catalog.list_catalog(types = "ITEM" )
+        result = ord.menu
+        menu = []
+        for object in result['objects']:
+            menu.append(object['item_data']['name'])
+        return menu
         return "ERROR: cannot retrieve menu."
 
 class GetDetailedMenuTool(BaseTool):
@@ -62,24 +68,21 @@ class GetDetailedMenuTool(BaseTool):
         self, run_manager: Optional[CallbackManagerForToolRun] = None
     ) -> str:
         """Get from square api"""
-        result = client.catalog.list_catalog(types = "ITEM" )
-        if result.is_success():
-            menu = []
-            for object in result.body['objects']:
-                for variation in object['item_data']['variations']:
-                    menu.append(variation['item_variation_data']['name'] + ' ' + object['item_data']['name'])
-            return menu
-        elif result.is_error():
-          # todo error handling.
-          pass
+        #result = client.catalog.list_catalog(types = "ITEM" )
+        result = ord.menu
+        menu = []
+        for object in result['objects']:
+            for variation in object['item_data']['variations']:
+                menu.append(variation['item_variation_data']['name'] + ' ' + object['item_data']['name'])
+        return menu
         return "ERROR: cannot retrieve menu."
 
 
-class CreateOrderSchema(BaseModel):
+class OrderSchema(BaseModel):
     item_id: str = Field(description="The item ID of the item being ordered.")
     quantity: str = Field(description="**VERY IMPORTANT: must be a string. The quantity of food item requested.")
 
-
+"""
 class CreateOrderTool(BaseTool):
     name="create_new_order"
     description="used for creating a new order. Do not hallucinate. Use GetItemIdTool to get the Id of a item."
@@ -87,8 +90,90 @@ class CreateOrderTool(BaseTool):
     def _run(
         self, item_id: str, quantity: str, run_manager: Optional[CallbackManagerForToolRun] = None
     ) -> str:    
-          return client.orders.create_order(body = {  "order": { "location_id": LOCATION, "line_items": [{"catalog_object_id" : item_id, "item_type": "ITEM", "quantity": quantity}]},"idempotency_key": str(uuid4().hex)})
-        
+        if ord.ONGOING == False:
+            result = client.orders.create_order(body = {  "order": { "location_id": ord.LOCATION, "line_items": [{"catalog_object_id" : item_id, "item_type": "ITEM", "quantity": quantity}]},"idempotency_key": str(uuid4().hex)})
+        else: 
+            return "ERROR: there is already a ongoing order- use the update_order tool."
+            
+        if result.is_success():
+            ord.ONGOING = True
+            ord.ORDER_ID = result.body["order"]["id"]
+            ord.addItem(item_id)
+            return result.body
+        else:
+          return "Error: square api call to create a new order failed." 
+
+class UpdateOrderTool(BaseTool):
+    name="update_order"
+    description="used for adding items to an existing order. Do not hallucinate. Use GetItemIdTool to get the Id of a item."
+    args_schema: Type[CreateOrderSchema] = CreateOrderSchema
+    def _run(
+        self, item_id: str, quantity: str, run_manager: Optional[CallbackManagerForToolRun] = None
+    ) -> str:    
+        if ord.ONGOING == True:
+            body = { 
+                "order": { 
+                    "location_id": ord.LOCATION, 
+                    "line_items": [
+                        {
+                            "catalog_object_id" : item_id,
+                            "item_type": "ITEM", 
+                            "quantity": quantity
+                        }
+                    ]
+                },
+                "idempotency_key": str(uuid4().hex)
+            }
+            result = client.orders.update_order(ord.ORDER_ID, body)
+        else: 
+            return "ERROR: there is already a ongoing order- use the update_order tool."
+"""
+
+class OrderTool(BaseTool):
+    name="order tool"
+    description="For creating new orders or adding items to existing orders. Use find_item_id_tool to get the item_id."
+    args_schema: Type[OrderSchema] = OrderSchema
+    def _run(
+        self, item_id: str, quantity: str, run_manager: Optional[CallbackManagerForToolRun] = None
+    ) -> str:    
+        if ord.ONGOING == True:
+            body = { 
+                "order": { 
+                    "location_id": ord.LOCATION, 
+                    "line_items": [
+                        {
+                            "catalog_object_id" : item_id,
+                            "item_type": "ITEM", 
+                            "quantity": quantity
+                        }
+                    ]
+                },
+                "idempotency_key": str(uuid4().hex)
+            }
+            result = client.orders.update_order(ord.ORDER_ID, body)
+            if result.is_success():
+                return result.body
+            else:
+                return "ERROR: square update_order call threw an error."
+        else:
+            body = {  
+                "order": { 
+                    "location_id": ord.LOCATION,
+                    "line_items": [
+                        {"catalog_object_id" : item_id,
+                         "item_type": "ITEM",
+                         "quantity": quantity
+                        }
+                    ]
+                },
+                "idempotency_key": str(uuid4().hex)
+            }
+            result = client.orders.create_order(body)
+            if result.is_success():
+                return result.body
+            else:
+                return "ERROR: square create_order call threw an error."
+
 class GetVerboseMenuTool(BaseTool):
     name="get_verbose_menu_tool"
     description="helpful for getting the menu items"
@@ -96,19 +181,17 @@ class GetVerboseMenuTool(BaseTool):
         self, args, run_manager: Optional[CallbackManagerForToolRun] = None
     ) -> str:
         """Get from square api"""
-        result = client.catalog.list_catalog(types = "ITEM" )
-        if result.is_success():
-            menu = {}
-            for object in result.body['objects']:
-                for variation in object['item_data']['variations']:
-                    menu[variation['item_variation_data']['name'] + ' ' + object['item_data']['name']] = {
-                        'item_id' : variation['id'],
-                        'price' : variation['item_variation_data']['price_money']['amount']                    
-                    }
-                return menu
-        elif result.is_error():
-          # todo error handling.
-          pass
+        #result = client.catalog.list_catalog(types = "ITEM" )
+        result = ord.menu
+        menu = {}
+        for object in result['objects']:
+            for variation in object['item_data']['variations']:
+                menu[variation['item_variation_data']['name'] + ' ' + object['item_data']['name']] = {
+                    'item_id' : variation['id'],
+                    'price' : variation['item_variation_data']['price_money']['amount']                    
+                }
+            return menu
+
         return []
 
         
@@ -124,8 +207,9 @@ class FindItemIdTool(BaseTool):
         self, name, run_manager: Optional[CallbackManagerForToolRun] = None
     ) -> str:
         """Get from square api"""
-        result = client.catalog.list_catalog(types = "ITEM" )
-        for object in result.body['objects']:
+        #result = client.catalog.list_catalog(types = "ITEM" )
+        result = ord.menu
+        for object in result['objects']:
             for variation in object['item_data']['variations']:
                 temp_item = (variation['item_variation_data']['name'] + ' ' + object['item_data']['name']).lower()
                 # TOdo some regex
@@ -143,21 +227,19 @@ class GetEntireMenuTool(BaseTool):
         self, args, run_manager: Optional[CallbackManagerForToolRun] = None
     ) -> str:
         """Get from square api"""
-        result = client.catalog.list_catalog(types = "ITEM" )
-        if result.is_success():
-            menu = {}
-            for object in result.body['objects']:
-                for variation in object['item_data']['variations']:
-                    menu[object['item_data']['name']] = {
-                        'type' : object['item_data']['name'],
-                        'modifiers' : variation['item_variation_data']['name'].split(','),
-                        'item_id' : variation['id'],
-                        'price' : variation['item_variation_data']['price_money']['amount']                    
-                    }
-                return menu
-        elif result.is_error():
-          # todo error handling.
-          pass
+        #result = client.catalog.list_catalog(types = "ITEM" )
+        result = ord.menu        
+        menu = {}
+        for object in result['objects']:
+            for variation in object['item_data']['variations']:
+                menu[object['item_data']['name']] = {
+                    'type' : object['item_data']['name'],
+                    'modifiers' : variation['item_variation_data']['name'].split(','),
+                    'item_id' : variation['id'],
+                    'price' : variation['item_variation_data']['price_money']['amount']                    
+                }
+            return menu
+   
         return []
         
          
