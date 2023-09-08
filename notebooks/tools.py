@@ -15,14 +15,14 @@ from dotenv import load_dotenv
 import os
 
 from order import Order
+load_dotenv()
 
 ord = Order()
 
-load_dotenv()
 API_KEY = os.getenv("API_KEY")
 LOCATION = os.getenv("LOCATION")
 
-
+# want to get rid of this
 client = Client(
     square_version='2023-08-16',
     access_token=API_KEY,
@@ -78,11 +78,11 @@ class GetDetailedMenuTool(BaseTool):
         return "ERROR: cannot retrieve menu."
 
 
-class CreateOrderSchema(BaseModel):
+class OrderSchema(BaseModel):
     item_id: str = Field(description="The item ID of the item being ordered.")
     quantity: str = Field(description="**VERY IMPORTANT: must be a string. The quantity of food item requested.")
 
-
+"""
 class CreateOrderTool(BaseTool):
     name="create_new_order"
     description="used for creating a new order. Do not hallucinate. Use GetItemIdTool to get the Id of a item."
@@ -90,14 +90,90 @@ class CreateOrderTool(BaseTool):
     def _run(
         self, item_id: str, quantity: str, run_manager: Optional[CallbackManagerForToolRun] = None
     ) -> str:    
-        result = client.orders.create_order(body = {  "order": { "location_id": LOCATION, "line_items": [{"catalog_object_id" : item_id, "item_type": "ITEM", "quantity": quantity}]},"idempotency_key": str(uuid4().hex)})
+        if ord.ONGOING == False:
+            result = client.orders.create_order(body = {  "order": { "location_id": ord.LOCATION, "line_items": [{"catalog_object_id" : item_id, "item_type": "ITEM", "quantity": quantity}]},"idempotency_key": str(uuid4().hex)})
+        else: 
+            return "ERROR: there is already a ongoing order- use the update_order tool."
+            
         if result.is_success():
             ord.ONGOING = True
             ord.ORDER_ID = result.body["order"]["id"]
+            ord.addItem(item_id)
             return result.body
         else:
-          return 
-        
+          return "Error: square api call to create a new order failed." 
+
+class UpdateOrderTool(BaseTool):
+    name="update_order"
+    description="used for adding items to an existing order. Do not hallucinate. Use GetItemIdTool to get the Id of a item."
+    args_schema: Type[CreateOrderSchema] = CreateOrderSchema
+    def _run(
+        self, item_id: str, quantity: str, run_manager: Optional[CallbackManagerForToolRun] = None
+    ) -> str:    
+        if ord.ONGOING == True:
+            body = { 
+                "order": { 
+                    "location_id": ord.LOCATION, 
+                    "line_items": [
+                        {
+                            "catalog_object_id" : item_id,
+                            "item_type": "ITEM", 
+                            "quantity": quantity
+                        }
+                    ]
+                },
+                "idempotency_key": str(uuid4().hex)
+            }
+            result = client.orders.update_order(ord.ORDER_ID, body)
+        else: 
+            return "ERROR: there is already a ongoing order- use the update_order tool."
+"""
+
+class OrderTool(BaseTool):
+    name="order tool"
+    description="For creating new orders or adding items to existing orders. Use find_item_id_tool to get the item_id."
+    args_schema: Type[OrderSchema] = OrderSchema
+    def _run(
+        self, item_id: str, quantity: str, run_manager: Optional[CallbackManagerForToolRun] = None
+    ) -> str:    
+        if ord.ONGOING == True:
+            body = { 
+                "order": { 
+                    "location_id": ord.LOCATION, 
+                    "line_items": [
+                        {
+                            "catalog_object_id" : item_id,
+                            "item_type": "ITEM", 
+                            "quantity": quantity
+                        }
+                    ]
+                },
+                "idempotency_key": str(uuid4().hex)
+            }
+            result = client.orders.update_order(ord.ORDER_ID, body)
+            if result.is_success():
+                return result.body
+            else:
+                return "ERROR: square update_order call threw an error."
+        else:
+            body = {  
+                "order": { 
+                    "location_id": ord.LOCATION,
+                    "line_items": [
+                        {"catalog_object_id" : item_id,
+                         "item_type": "ITEM",
+                         "quantity": quantity
+                        }
+                    ]
+                },
+                "idempotency_key": str(uuid4().hex)
+            }
+            result = client.orders.create_order(body)
+            if result.is_success():
+                return result.body
+            else:
+                return "ERROR: square create_order call threw an error."
+
 class GetVerboseMenuTool(BaseTool):
     name="get_verbose_menu_tool"
     description="helpful for getting the menu items"
