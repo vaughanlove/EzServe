@@ -14,6 +14,8 @@ from square.api.catalog_api import CatalogApi
 from dotenv import load_dotenv
 import os
 
+import re
+
 from order import Order
 load_dotenv()
 
@@ -130,7 +132,7 @@ class UpdateOrderTool(BaseTool):
 """
 
 class OrderTool(BaseTool):
-    name="order tool"
+    name="order_tool"
     description="For creating new orders or adding items to existing orders. Use find_item_id_tool to get the item_id."
     args_schema: Type[OrderSchema] = OrderSchema
     def _run(
@@ -146,23 +148,32 @@ class OrderTool(BaseTool):
                             "item_type": "ITEM", 
                             "quantity": quantity
                         }
-                    ]
+                    ],
+                    "version": 1
                 },
                 "idempotency_key": str(uuid4().hex)
             }
+
+            print(body)
+            print(ord.ORDER_ID)
             result = client.orders.update_order(ord.ORDER_ID, body)
+            print(result)
             if result.is_success():
+                ord.VERSION += 1
                 return result.body
+            elif result.is_error():
+                return result
             else:
-                return "ERROR: square update_order call threw an error."
+                return result
         else:
             body = {  
                 "order": { 
                     "location_id": ord.LOCATION,
                     "line_items": [
-                        {"catalog_object_id" : item_id,
-                         "item_type": "ITEM",
-                         "quantity": quantity
+                        {
+                            "catalog_object_id" : item_id,
+                            "item_type": "ITEM",
+                            "quantity": quantity
                         }
                     ]
                 },
@@ -170,6 +181,8 @@ class OrderTool(BaseTool):
             }
             result = client.orders.create_order(body)
             if result.is_success():
+                ord.ORDER_ID = result.body["order"]["id"]
+                ord.ONGOING = True
                 return result.body
             else:
                 return "ERROR: square create_order call threw an error."
@@ -211,9 +224,14 @@ class FindItemIdTool(BaseTool):
         result = ord.menu
         for object in result['objects']:
             for variation in object['item_data']['variations']:
-                temp_item = (variation['item_variation_data']['name'] + ' ' + object['item_data']['name']).lower()
-                # TOdo some regex
-                if (name.lower() == temp_item.replace(',', '')):
+                temp_item = (variation['item_variation_data']['name'] + ' ' + object['item_data']['name']).lower().replace(',', '').replace('(', '').replace(')', '')
+                temp_name = name.lower().replace(',', '').replace('(', '').replace(')', '').split(' ')
+                same = True
+                # TOdo replace with regex
+                for ty in temp_item.split(' '):
+                    same = same & (ty in temp_name)
+                
+                if (same):
                     return variation['id']
 
         # todo: improve errors

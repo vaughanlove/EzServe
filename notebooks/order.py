@@ -12,6 +12,7 @@ class Order:
     
     API_KEY = ''
     LOCATION = ''
+    VERSION = 1
 
     order_items = []
     
