@@ -4,18 +4,22 @@
 #    environment='sandbox')
 
 class Order:
-    order_id = ''
-    ongoing_order = False
+    ORDER_ID = ''
+    ONGOING = False
 
     order_items = []
     
     def __init__(self):
-        #self.menu = getMenu()
-        pass
+        self.initMenu()
 
-    def getMenu():
-        pass
-
+    # private
+    def __initMenu(self):
+        result = client.catalog.list_catalog(types = "ITEM" )
+        if result.is_success():
+            self.menu = result.body
+        else:
+            # desperately need to improve error handling.
+            return "ERROR: could not retrieve menu."
     
     # this should be loaded from square client api when Order is instantiated.
     menu =  {'objects': [{'created_at': '2023-09-04T22:29:03.341Z',

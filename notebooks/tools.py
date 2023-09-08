@@ -37,8 +37,8 @@ class GetOrderIdTool(BaseTool):
           self, run_manager: Optional[CallbackManagerForToolRun] = None
     ) -> str:
         """Test values"""
-        if ONGOING_ORDER:
-            return ord.order_id
+        if ord.ONGOING:
+            return ord.ORDER_ID
         else:
             return "ERROR: there is no current order id. Use create_new_order"
 
@@ -92,8 +92,8 @@ class CreateOrderTool(BaseTool):
     ) -> str:    
         result = client.orders.create_order(body = {  "order": { "location_id": LOCATION, "line_items": [{"catalog_object_id" : item_id, "item_type": "ITEM", "quantity": quantity}]},"idempotency_key": str(uuid4().hex)})
         if result.is_success():
-            ONGOING_ORDER = True
-            ORDER_ID = result.body["order"]["id"]
+            ord.ONGOING = True
+            ord.ORDER_ID = result.body["order"]["id"]
             return result.body
         else:
           return 
