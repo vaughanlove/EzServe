@@ -1,3 +1,5 @@
 /notebooks/.ipynb_checkpoints/
 
 .env
+
+/notebooks/__pycache__/
