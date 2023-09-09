@@ -5,9 +5,6 @@ from typing import Optional, Type
 from pydantic import BaseModel, Field, ConfigDict
 from uuid import uuid4
 
-from square.client import Client
-from square.api.catalog_api import CatalogApi
-
 from dotenv import load_dotenv
 import os
 
@@ -16,10 +13,6 @@ import re
 from order import Order
 
 ord = Order()
-
-load_dotenv()
-API_KEY = os.getenv("API_KEY")
-LOCATION = os.getenv("LOCATION")
 
 # for testing - currently used in order checkout.
 DEVICE_ID_CHECKOUT_SUCCESS="9fa747a2-25ff-48ee-b078-04381f7c828f"
@@ -58,50 +51,17 @@ class OrderTool(BaseTool):
         self, item_id: str, quantity: str, run_manager: Optional[CallbackManagerForToolRun] = None
     ) -> str:    
         if ord.ONGOING == True:
-            body = { 
-                "order": { 
-                    "location_id": ord.LOCATION, 
-                    "line_items": [
-                        {
-                            "catalog_object_id" : item_id,
-                            "item_type": "ITEM", 
-                            "quantity": quantity
-                        }
-                    ],
-                    "version": 1
-                },
-                "idempotency_key": str(uuid4().hex)
-            }
-            result = ord.client.orders.update_order(ord.ORDER_ID, body)
-            if result.is_success():
-                ord.VERSION += 1
-                return result.body
-            elif result.is_error():
-                return result
-            else:
-                return result
+            return ord.updateOrder(item_id, quantity)
         else:
-            body = {  
-                "order": { 
-                    "location_id": ord.LOCATION,
-                    "line_items": [
-                        {
-                            "catalog_object_id" : item_id,
-                            "item_type": "ITEM",
-                            "quantity": quantity
-                        }
-                    ]
-                },
-                "idempotency_key": str(uuid4().hex)
-            }
-            result = ord.client.orders.create_order(body)
-            if result.is_success():
-                ord.ORDER_ID = result.body["order"]["id"]
-                ord.ONGOING = True
-                return result.body
-            else:
-                return "ERROR: square create_order call threw an error."
-                
+            return ord.createOrder(item_id, quantity)
+
+class MakeOrderCheckoutTool(BaseTool):
+    name="make_order_checkout"
+    description="for when the customer wants to checkout their order. Important** ONLY call this when the customer is asking to check out."
+    def _run(
+        self, run_manager: Optional[CallbackManagerForToolRun] = None
+    ) -> str:
+        return ord.startCheckout()
 
 class FindItemIdTool(BaseTool):
     name="find_item_id_tool"
@@ -110,7 +70,7 @@ class FindItemIdTool(BaseTool):
     def _run(
         self, name, run_manager: Optional[CallbackManagerForToolRun] = None
     ) -> str:
-        """Get from square api"""
+        """Check the menu for a similar match."""
         for object in ord.menu['objects']:
             for variation in object['item_data']['variations']:
                 temp_item = (variation['item_variation_data']['name'] + ' ' + object['item_data']['name']).lower().replace(',', '').replace('(', '').replace(')', '')
@@ -126,42 +86,8 @@ class FindItemIdTool(BaseTool):
         # todo: improve errors
         return "Error: cannot find item in menu."
 
-class MakeOrderCheckoutTool(BaseTool):
-    name="make_order_checkout"
-    description="for when the customer wants to checkout their order. Important** ONLY call this when the customer is asking to check out."
-    def _run(
-        self, run_manager: Optional[CallbackManagerForToolRun] = None
-    ) -> str:
-        order = client.orders.retrieve_order(order_id = ord.ORDER_ID)
-        if order.is_error():
-            return "Error: order retrieval failed."
-            
-        body = {
-            "idempotency_key": str(uuid4().hex),
-            "checkout": {
-                "order_id": ord.ORDER_ID,
-                "payment_options": {
-                    "autocomplete": True,
-                    "accept_partial_authorization": False
-                },
-                "device_options": {
-                    "device_id": DEVICE_ID_CHECKOUT_SUCCESS,
-                    "skip_receipt_screen": True,
-                    "collect_signature": True,
-                    "show_itemized_cart": True
-                },
-                "payment_type": "CARD_PRESENT",
-                "customer_id": ""
-            }
-        }
-        result = ord.client.terminal.create_terminal_checkout(body)
-        if result.is_success():
-                ord.ORDER_ID = ''
-                ord.ONGOING = False
-                return result.body
-        else:
-            return "ERROR: square create_order call threw an error."
 
+'''
 # deprecated 
 class GetEntireMenuTool(BaseTool):
     name="get_menu_tool"
@@ -206,7 +132,6 @@ class GetVerboseMenuTool(BaseTool):
 
         return []
 
-'''
 # deprecated for OrderTool
 class CreateOrderTool(BaseTool):
     name="create_new_order"
