@@ -8,6 +8,9 @@ class Order:
     ORDER_ID = ''
     ONGOING = False
 
+    # add to total after each item.
+    TOTAL = 0
+
     client = None
     
     API_KEY = ''
@@ -25,10 +28,13 @@ class Order:
         self.LOCATION = os.getenv("LOCATION")
         self.client = Client( square_version='2023-08-16', access_token=self.API_KEY, environment='sandbox')
 
-    # todo: add type checking for item - make a Item type.
+    # todo: add type checking for item - make a Item type (with cost of each item and running).
     def addItem(self, item):
         self.order_items.append(item)
-        
+
+    # todo add a getOrderTotal() for use with checkout.
+    # def calculate
+    
     # private
     def __initMenu(self):
         result = self.client.catalog.list_catalog(types = "ITEM" )
