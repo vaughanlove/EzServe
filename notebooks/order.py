@@ -1,18 +1,12 @@
 from dotenv import load_dotenv
 import os
 from uuid import uuid4
-
 from square.client import Client
-from square.api.catalog_api import CatalogApi
-
-# dummy values for testing
-DEVICE_ID_CHECKOUT_SUCCESS="9fa747a2-25ff-48ee-b078-04381f7c828f"
-DEVICE_ID_CHECKOUT_SUCCESS_TIP="22cd266c-6246-4c06-9983-67f0c26346b0"
-DEVICE_ID_CHECKOUT_SUCCESS_GC="4mp4e78c-88ed-4d55-a269-8008dfe14e9"
-DEVICE_ID_CHECKOUT_FAILURE_BUYER_CANCEL="841100b9-ee60-4537-9bcf-e30b2ba5e215"
 
 class Order:
     ORDER_ID = ''
+    CHECKOUT_ID = ''
+    DEVICE = ''
     ONGOING = False
     # add to total after each item.
     TOTAL = 0
@@ -34,6 +28,7 @@ class Order:
         load_dotenv()
         self.API_KEY = os.getenv("API_KEY")
         self.LOCATION = os.getenv("LOCATION")
+        self.DEVICE = os.getenv("DEVICE")
         self.client = Client( square_version='2023-08-16', access_token=self.API_KEY, environment='sandbox')
 
     def getTotal(self):
@@ -60,14 +55,20 @@ class Order:
             },
             "idempotency_key": str(uuid4().hex)
         }
-        result = self.client.orders.update_order(ord.ORDER_ID, body)
+        result = self.client.orders.update_order(self.ORDER_ID, body)
+
+        #print(result.body)
+
         if result.is_success():
+            item = result.body["order"]["line_items"][0]["name"]
+
+            self.order_items.append(item)
+            self.TOTAL += int(result.body["order"]["line_items"][self.VERSION]["base_price_money"]["amount"])
             self.VERSION += 1
-            self.order_items.append(result.body["order"]["line_items"][0]["name"])
-            self.TOTAL += result.body["order"]["line_items"][0]["base_price_money"]["amount"]
-            return result.body
+
+            return f"Order for {item} was placed successfully."
         else:
-            return result.error
+            return "ERROR: call to square api to update order failed."
 
     def createOrder(self, item_id, quantity):
         # checking parameters
@@ -86,20 +87,25 @@ class Order:
             "idempotency_key": str(uuid4().hex)
         }
         result = self.client.orders.create_order(body)
+
+        #print(result.body)
+        
         if result.is_success():
+            item = result.body["order"]["line_items"][0]["name"]
+            
             self.ORDER_ID = result.body["order"]["id"]
             self.ONGOING = True
-            self.order_items.append(result.body["order"]["line_items"][0]["name"])
-            self.TOTAL += result.body["order"]["line_items"][0]["base_price_money"]["amount"]
-            return result.body
+            self.order_items.append(item)
+            self.TOTAL += int(result.body["order"]["line_items"][0]["base_price_money"]["amount"])
+            return f"Order for {item} was placed successfully."
         else:
             return "ERROR: square create_order call threw an error."
 
 
     def startCheckout(self):
-        order = self.client.orders.retrieve_order(order_id = self.ORDER_ID)
-        if order.is_error():
-            return "Error: order retrieval failed."
+        #order = self.client.orders.retrieve_order(order_id = self.ORDER_ID)
+        #if order.is_error():
+        #    return "Error: order retrieval failed."
             
         body = {
             "idempotency_key": str(uuid4().hex),
@@ -114,7 +120,7 @@ class Order:
                     "accept_partial_authorization": False
                 },
                 "device_options": {
-                    "device_id": DEVICE_ID_CHECKOUT_SUCCESS,
+                    "device_id": self.DEVICE,
                     "skip_receipt_screen": True,
                     "collect_signature": True,
                     "show_itemized_cart": True
@@ -129,13 +135,23 @@ class Order:
             self.ONGOING = False
             self.TOTAL = 0
             self.order_items = []
+            self.CHECKOUT_ID = result.body['checkout']['id']
             return "Checkout was successful, have a good day!"
         else:
             return "ERROR: square create_order call threw an error."
 
-    # todo add a getOrderTotal() for use with checkout.
-    # def calculate
-    
+    def cancelCheckout(self):
+        assert self.CHECKOUT_ID != '', "Missing Checkout ID"
+        
+        result = self.client.terminal.cancel_terminal_checkout(
+          checkout_id = self.CHECKOUT_ID
+        )
+        if result.is_success():
+            self.CHECKOUT_ID = ''
+            return "Checkout successfully cancelled. Feel free to continue ordering."
+        else:
+            return "ERROR: checkout could not be cancelled"
+        
     # private
     def __initMenu(self):
         result = self.client.catalog.list_catalog(types = "ITEM" )
