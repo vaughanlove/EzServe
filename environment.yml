@@ -1,4 +1,4 @@
-name: square
+name: autoserve
 channels:
   - conda-forge
   - anaconda
