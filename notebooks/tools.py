@@ -14,10 +14,6 @@ from order import Order
 
 ord = Order()
 
-# for testing - currently used in order checkout.
-DEVICE_ID_CHECKOUT_SUCCESS="9fa747a2-25ff-48ee-b078-04381f7c828f"
-
-
 class GetDetailedMenuTool(BaseTool):
     name="get_detailed_menu_tool"
     description="helpful for listing the entire menu when details like size or flavor of an item are asked about. important** should not be used when ordering."
@@ -86,6 +82,14 @@ class FindItemIdTool(BaseTool):
         # todo: improve errors
         return "Error: cannot find item in menu."
 
+class GetOrderTool(BaseTool):
+    name="get_order_tool"
+    description="for retrieving the items in the customer's order."
+    def _run(
+        self, run_manager: Optional[CallbackManagerForToolRun] = None
+    ) -> str:
+        """Return the customer's current order"""
+        return ord.order_items
 
 '''
 # deprecated 

@@ -60,7 +60,7 @@ class Order:
         #print(result.body)
 
         if result.is_success():
-            item = result.body["order"]["line_items"][0]["name"]
+            item = result.body["order"]["line_items"][self.VERSION]["name"]
 
             self.order_items.append(item)
             self.TOTAL += int(result.body["order"]["line_items"][self.VERSION]["base_price_money"]["amount"])
