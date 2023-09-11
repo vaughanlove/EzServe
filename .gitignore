@@ -8,3 +8,5 @@
 /venv/
 /app/src/.env
 app/src/__pycache__/
+app/__pycache__
+app/tmp
