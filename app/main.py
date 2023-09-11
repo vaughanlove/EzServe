@@ -1,17 +1,10 @@
-import os
-import json
+from src import autoserve 
 
-from pprint import pprint
-
-from langchain import LLMChain, PromptTemplate
-from langchain.agents import ZeroShotAgent, Tool, AgentExecutor, AgentType, initialize_agent
-from langchain.llms import vertexai
-from langchain.tools.base import BaseTool
-from langchain.callbacks.manager import (AsyncCallbackManagerForToolRun, CallbackManagerForToolRun)
+server = autoserve.AutoServe()
+test = server.agent.run("Could I order a small coffee please?")
+print(test)
+# need to mess with concurrency?
+# here is where the chirp model records/transcribes/returns string
 
 
-from vertexai.preview.language_models import TextGenerationModel
-from google.cloud import aiplatform
-
-from pydantic import BaseModel, Field, ConfigDict
-from typing import Optional, Type
+    

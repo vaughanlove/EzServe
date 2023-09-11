@@ -5,3 +5,6 @@
 /notebooks/__pycache__/
 .ipynb_checkpoints/
 src
+/venv/
+/app/src/.env
+app/src/__pycache__/
