@@ -1,5 +1,6 @@
 import os 
 from enum import Enum
+import threading
 
 from langchain.agents import AgentType, initialize_agent
 from langchain.llms import vertexai
@@ -11,6 +12,17 @@ from google.cloud.speech_v2.types import cloud_speech
 from dotenv import load_dotenv
 import pyaudio
 import wave
+
+# Event object to control the loop and thread termination
+stop_event = threading.Event()
+
+def check_user_input():
+    while not stop_event.is_set():
+        user_input = input("Do you want to stop the recording? (y/n): ")
+        if user_input.lower() == 'y':
+            stop_event.set()
+            print("Loop will be stopped.")
+            break
 
 # refactor into own subdir?
 from .tools import OrderTool, GetDetailedMenuTool, FindItemIdTool, MakeOrderCheckoutTool, GetOrderTool
@@ -67,14 +79,23 @@ class AutoServe():
         
         print("Recording...")
 
+        print("starting the user input thread")
+        # Start the user input thread
+        input_thread = threading.Thread(target=check_user_input)
+        input_thread.start()
+
         frames = []
 
         # Record audio
         # TODO: make this stop when user inputs 'stop' - instead of just after 5 seconds. '
 
-        for i in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
+        while True:
+            if stop_event.is_set():
+                print("Loop has been stopped.")
+                break
             data = stream.read(CHUNK)
             frames.append(data)
+
 
         # Close and terminate the stream
         print("Finished recording.")
@@ -82,6 +103,11 @@ class AutoServe():
         stream.close()
         p.terminate()
 
+        # Signal the user input thread to terminate
+        stop_event.set()
+
+# Wait for the user input thread to terminate
+        input_thread.join()
         # Save the audio data as a .wav file
         with wave.open(self.WAVE_OUTPUT_FILENAME, 'wb') as wf:
             wf.setnchannels(CHANNELS)
