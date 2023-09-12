@@ -1,3 +1,5 @@
+"""For testing PyAudio"""
+
 import pyaudio
 import wave
 
@@ -13,9 +15,9 @@ RECORD_SECONDS = 5
 WAVE_OUTPUT_FILENAME = "audio_file.wav"
 
 # Open audio stream
-stream = p.open(format=FORMAT, channels=CHANNELS,
-                rate=RATE, input=True,
-                frames_per_buffer=CHUNK)
+stream = p.open(
+    format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK
+)
 
 print("Recording...")
 
@@ -33,8 +35,8 @@ stream.close()
 p.terminate()
 
 # Save the audio data as a .wav file
-with wave.open(WAVE_OUTPUT_FILENAME, 'wb') as wf:
+with wave.open(WAVE_OUTPUT_FILENAME, "wb") as wf:
     wf.setnchannels(CHANNELS)
     wf.setsampwidth(p.get_sample_size(FORMAT))
     wf.setframerate(RATE)
-    wf.writeframes(b''.join(frames))
+    wf.writeframes(b"".join(frames))

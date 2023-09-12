@@ -1,162 +1,194 @@
+"""Order module for managing order details and interacting with the square api.
+
+TODO:
+    Add exceptions
+    Improve error handling
+    Write tests
+"""
+
 from dotenv import load_dotenv
 import os
 from uuid import uuid4
 from square.client import Client
 
-class Order:
-    ORDER_ID = ''
-    CHECKOUT_ID = ''
-    DEVICE = ''
-    ONGOING = False
-    # add to total after each item.
-    TOTAL = 0
+
+class Order(object):
+    """Contains all methods and information for managing a square order.
+
+    Attributes:
+        order_ongoing (bool): True if there has been an order created, False otherwise.
+        order_total_cost (int): Total cost in cents of the order.
+        order_version (int): Used for updating the order, to ensure sequential ordering.
+        order_items (:obj:`list` of :obj:`str`): List of item names in the order.
+        _order_id (str): The order ID corresponding to the order in square's db.
+    """
+
+    order_ongoing = False
+    order_total_cost = 0
+    order_version = 1
     order_items = []
+    _order_id = None
 
-    # should I make this private and only expose order methods?
-    client = None
-    
-    API_KEY = ''
-    LOCATION = ''
-    VERSION = 1
-
-    
     def __init__(self):
-        self.__setupClient()
-        self.__initMenu()
+        """
+        Initialize the Order class. Sets up the Square Client and fetches the menu.
+        """
+        self.__setup_client()
+        self.__init_menu()
 
-    def __setupClient(self):
-        load_dotenv()
-        self.API_KEY = os.getenv("API_KEY")
-        self.LOCATION = os.getenv("LOCATION")
-        self.DEVICE = os.getenv("DEVICE")
-        self.client = Client( square_version='2023-08-16', access_token=self.API_KEY, environment='sandbox')
+    def get_order_total(self):
+        """
+        Returns the total cost of the order.
+        """
+        return self.order_total_cost
 
-    def getTotal(self):
-        return self.TOTAL
-    
-    def getItems(self):
+    def get_order_items(self):
+        """Returns the items in the order."""
         return self.order_items
 
-    # todo: add type checking for item - make a Item type (with cost of each item and running).
-    def updateOrder(self, item_id, quantity):
-        # checking parameters
-        assert type(quantity) == str, "Quantity parameter should be a string."
-        body = { 
-            "order": { 
-                "location_id": self.LOCATION, 
+    def add_item_to_order(self, item_id, quantity):
+        """Adds an item to the order.
+
+        Todo:
+            add type checking for item - make a Item type.
+
+        Args:
+            item_id (str): The item_id of the item.
+            quantity (str): The amount of item to add.
+        """
+        assert isinstance(quantity) == str, "Quantity parameter should be a string."
+
+        # https://developer.squareup.com/explorer/square/orders-api/update-order
+        body = {
+            "order": {
+                "location_id": self._location_id,
                 "line_items": [
                     {
-                        "catalog_object_id" : item_id,
-                        "item_type": "ITEM", 
-                        "quantity": quantity
+                        "catalog_object_id": item_id,
+                        "item_type": "ITEM",
+                        "quantity": quantity,
                     }
                 ],
-                "version": 1
+                "version": 1,
             },
-            "idempotency_key": str(uuid4().hex)
+            "idempotency_key": str(uuid4().hex),
         }
-        result = self.client.orders.update_order(self.ORDER_ID, body)
-
-        #print(result.body)
-
+        result = self._square_client.orders.update_order(self._order_id, body)
         if result.is_success():
-            item = result.body["order"]["line_items"][self.VERSION]["name"]
-
+            item = result.body["order"]["line_items"][self.order_version]["name"]
             self.order_items.append(item)
-            self.TOTAL += int(result.body["order"]["line_items"][self.VERSION]["base_price_money"]["amount"])
-            self.VERSION += 1
-
+            self.order_total_cost += int(
+                result.body["order"]["line_items"][self.order_version][
+                    "base_price_money"
+                ]["amount"]
+            )
+            self.order_version += 1
             return f"Order for {item} was placed successfully."
         else:
             return "ERROR: call to square api to update order failed."
 
-    def createOrder(self, item_id, quantity):
-        # checking parameters
-        assert type(quantity) == str, "Quantity parameter should be a string."
-        body = {  
-            "order": { 
-                "location_id": self.LOCATION,
+    def create_order(self, item_id, quantity):
+        """Create a new order.
+
+        Args:
+            item_id (str): The id from square corresponding to the ordered item.
+            quantity (str): The number of item ordered.
+        """
+        assert isinstance(quantity) == str, "Quantity parameter should be a string."
+        body = {
+            "order": {
+                "location_id": self._location_id,
                 "line_items": [
                     {
-                        "catalog_object_id" : item_id,
+                        "catalog_object_id": item_id,
                         "item_type": "ITEM",
-                        "quantity": quantity
+                        "quantity": quantity,
                     }
-                ]
+                ],
             },
-            "idempotency_key": str(uuid4().hex)
+            "idempotency_key": str(uuid4().hex),
         }
-        result = self.client.orders.create_order(body)
-
-        #print(result.body)
-        
+        result = self._square_client.orders.create_order(body)
         if result.is_success():
             item = result.body["order"]["line_items"][0]["name"]
-            
-            self.ORDER_ID = result.body["order"]["id"]
-            self.ONGOING = True
+            self.order_ongoing = True
             self.order_items.append(item)
-            self.TOTAL += int(result.body["order"]["line_items"][0]["base_price_money"]["amount"])
+            self.order_total_cost += int(
+                result.body["order"]["line_items"][0]["base_price_money"]["amount"]
+            )
+            self._order_id = result.body["order"]["id"]
             return f"Order for {item} was placed successfully."
         else:
             return "ERROR: square create_order call threw an error."
 
-
-    def startCheckout(self):
-        #order = self.client.orders.retrieve_order(order_id = self.ORDER_ID)
-        #if order.is_error():
-        #    return "Error: order retrieval failed."
-            
+    def start_checkout(self):
+        """Start a checkout on a square terminal."""
         body = {
             "idempotency_key": str(uuid4().hex),
             "checkout": {
-                "amount_money": {
-                    "amount": self.TOTAL,
-                    "currency": "USD"
-                  },
-                "order_id": self.ORDER_ID,
+                "amount_money": {"amount": self.order_total_cost, "currency": "USD"},
+                "order_id": self._order_id,
                 "payment_options": {
                     "autocomplete": True,
-                    "accept_partial_authorization": False
+                    "accept_partial_authorization": False,
                 },
                 "device_options": {
-                    "device_id": self.DEVICE,
+                    "device_id": self._square_device_id,
                     "skip_receipt_screen": True,
                     "collect_signature": True,
-                    "show_itemized_cart": True
+                    "show_itemized_cart": True,
                 },
                 "payment_type": "CARD_PRESENT",
-                "customer_id": ""
-            }
+                "customer_id": "",
+            },
         }
-        result = self.client.terminal.create_terminal_checkout(body)
+        result = self._square_client.terminal.create_terminal_checkout(body)
         if result.is_success():
-            self.ORDER_ID = ''
-            self.ONGOING = False
-            self.TOTAL = 0
+            self._order_id = ""
+            self.order_ongoing = False
+            self.order_total_cost = 0
             self.order_items = []
-            self.CHECKOUT_ID = result.body['checkout']['id']
+            self._checkout_id = result.body["checkout"]["id"]
             return "Checkout was successful, have a good day!"
         else:
             return "ERROR: square create_order call threw an error."
 
-    def cancelCheckout(self):
-        assert self.CHECKOUT_ID != '', "Missing Checkout ID"
-        
-        result = self.client.terminal.cancel_terminal_checkout(
-          checkout_id = self.CHECKOUT_ID
+    def cancel_checkout(self):
+        assert self._checkout_id != "", "Missing Checkout ID"
+        result = self._square_client.terminal.cancel_terminal_checkout(
+            checkout_id=self._checkout_id
         )
         if result.is_success():
-            self.CHECKOUT_ID = ''
+            self.checkout_id = ""
             return "Checkout successfully cancelled. Feel free to continue ordering."
         else:
             return "ERROR: checkout could not be cancelled"
-        
-    # private
-    def __initMenu(self):
-        result = self.client.catalog.list_catalog(types = "ITEM" )
+
+    def __setup_client(self):
+        """Load in environment variables and initialize the square client."""
+        load_dotenv()
+        self._square_api_key = os.getenv("API_KEY")  #: Square API key
+        self._location_id = os.getenv("LOCATION")  #: Square Location ID
+        self._square_device_id = os.getenv("DEVICE")  #: Square Device ID
+        #: _square_client ():obj:`Client`): The square client sdk
+        self._square_client = Client(
+            square_version="2023-08-16",
+            access_token=self._square_api_key,
+            environment="sandbox",
+        )
+
+    def __init_menu(self):
+        """ Fetch the menu from the square api.
+
+        Returns:
+            List of the names of menu items.
+        """
+        result = self._square_client.catalog.list_catalog(types="ITEM")
         if result.is_success():
-            self.menu = result.body
+            #: list of str: The menu items.
+            self.menu = []
+            for obj in result.body["objects"]:
+                for variation in obj["item_data"]["variations"]:
+                    self.menu.append(variation["item_variation_data"]["name"] + " " + obj["item_data"]["name"])
         else:
-            # desperately need to improve error handling.
             return "ERROR: could not retrieve menu."

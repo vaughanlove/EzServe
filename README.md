@@ -1,28 +1,42 @@
 
 # Auto Serve
 
-## setup
+## Installation
 
-### Notebooks
 #### conda
 
 1. `conda env create -f environment.yaml`
 2. `conda activate autoserve`
-3. `jupyter lab`
+
 
 #### pip
 
-1. (recommended) create a virtual environment.
-2. `pip install -r requirements.txt`
-3. `jupyter lab` 
+1. Create a virtual env: `python -m venv venv`
+2. `venv/Scripts/activate`
+3. `pip install -r requirements.txt`
 
-### Server
-Using docker:
+If you want to work with the notebooks:     `jupyter lab`
+If you want to run the bot:                 `python app/main.py` 
 
-** dont use docker during development - using windows devices inside a linux container is very jank.**
+#### docker
+
+** not using docker during development - using windows devices inside a linux container is very jank.**
 
 1. `git clone auto-serve`
 2. Build: `docker compose build`
 3. Run: `docker compose up`
+
+
+## TODO
+1. Make bot event loop robust
+2. Custom agent class
+3. Create virtual terminal for visualizing results.
+4. Testing
+5. Agent/Transcription error handling
+6. Documentation
+
+## Formatting
+Follow Google's python style guide: https://google.github.io/styleguide/pyguide.html
+
 
 ![DFD-High-Level Architecture drawio](https://github.com/vaughanlove/square-serve/assets/57467835/21e105cb-2171-49de-868d-1bc002ac9174)

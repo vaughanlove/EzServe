@@ -1,6 +1,9 @@
+"""For testing Google's transcribe API"""
+
 from google.cloud.speech_v2 import SpeechClient
 from google.cloud.speech_v2.types import cloud_speech
 import os
+
 
 def quickstart_v2(
     project_id: str,
@@ -34,6 +37,7 @@ def quickstart_v2(
 
     return response
 
+
 PROJECT_ID = os.getenv("SPEECH_PROJECT_ID")
 
-quickstart_v2(PROJECT_ID,"audio_file.wav")
+quickstart_v2(PROJECT_ID, "audio_file.wav")
