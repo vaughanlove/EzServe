@@ -36,7 +36,9 @@ If you want to run the bot:                 `python app/main.py`
 6. Documentation
 
 ## Formatting
-Follow Google's python style guide: https://google.github.io/styleguide/pyguide.html
+
+Following Google's python style guide: https://google.github.io/styleguide/pyguide.html 
+- changed indent from 2 spaces to 4.
 
 
 ![DFD-High-Level Architecture drawio](https://github.com/vaughanlove/square-serve/assets/57467835/21e105cb-2171-49de-868d-1bc002ac9174)

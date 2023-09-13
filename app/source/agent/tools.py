@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 
 # import re
 
-from .order import Order
+from source.agent.order import Order
 
 square_order = Order()
 
@@ -32,7 +32,6 @@ class FindItemIdSchema(BaseModel):
         Menu items will usually have adjectives before them like 'small' or 'pumpkin', \
         make sure to include those."
     )
-
 
 class OrderSchema(BaseModel):
     item_id: str = Field(

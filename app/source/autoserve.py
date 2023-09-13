@@ -1,6 +1,6 @@
 """ AutoServe module for combining the transcription module with the LLM agent."""
-# refactor into own subdir?
-from .tools import (
+
+from source.agent.tools import (
     OrderTool,
     GetDetailedMenuTool,
     FindItemIdTool,
@@ -21,6 +21,8 @@ from google.cloud.speech_v2.types import cloud_speech
 from dotenv import load_dotenv
 import pyaudio
 import wave
+
+import asyncio
 
 class State(Enum):
     RECORDING = 1
@@ -61,7 +63,28 @@ class AutoServe:
             verbose=verbose,
         )
 
+    async def my_loop(self):
+        counter = 0
+        while True:
+            print(f"Running... {counter}")
+            counter += 1
+            await asyncio.sleep(1)  # Non-blocking sleep for 1 second
+
+    async def handle_input(self):
+        while True:
+            user_input = await asyncio.to_thread(input, "Type something: ")  # Take user input asynchronously
+            print(f"You typed: {user_input}")
+
+    async def run(self):
+        # Start both tasks and run them concurrently
+        task1 = asyncio.create_task(self.my_loop())
+        task2 = asyncio.create_task(self.handle_input())
+
+        await task1
+        await task2
+
     def start(self) -> None:
+
         self.state = State.RECORDING
 
         p = pyaudio.PyAudio()
@@ -141,6 +164,7 @@ class AutoServe:
 
     def stop(self) -> None:
         self.state = State.PROCESSING
+
         # do the speech=> text and load text into member variable
 
     def get_state(self) -> State:
