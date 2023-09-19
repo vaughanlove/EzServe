@@ -8,6 +8,8 @@ from source.agent.tools import (
     GetOrderTool,
 )
 
+from source.audio.recorder import Recorder
+
 import os
 from enum import Enum
 
@@ -51,6 +53,8 @@ class AutoServe:
         self._load_env_vars(trace)
         self._setup_gcloud()
 
+        self.recorder = Recorder()
+
         self.llm = vertexai.VertexAI(temperature=0)
 
         assert self.llm is not None, "LLM NOT INSTANTIATED"
@@ -63,71 +67,17 @@ class AutoServe:
             verbose=verbose,
         )
 
-    async def my_loop(self):
-        counter = 0
-        while True:
-            print(f"Running... {counter}")
-            counter += 1
-            await asyncio.sleep(1)  # Non-blocking sleep for 1 second
-
-    async def handle_input(self):
-        while True:
-            user_input = await asyncio.to_thread(input, "Type something: ")  # Take user input asynchronously
-            print(f"You typed: {user_input}")
-
     async def run(self):
+        print("starting async record")
         # Start both tasks and run them concurrently
-        task1 = asyncio.create_task(self.my_loop())
-        task2 = asyncio.create_task(self.handle_input())
+        recordTask = asyncio.create_task(self.recorder.start())
 
-        await task1
-        await task2
+        # here we want to listen for a flag being set when self.recorder finishes a recording.
+        # when that flag is initiated, the transcriber() should be called and subsequently 
+        # process() should be called.
 
-    def start(self) -> None:
+        await recordTask
 
-        self.state = State.RECORDING
-
-        p = pyaudio.PyAudio()
-
-        FORMAT = pyaudio.paInt16
-        CHANNELS = 1
-        RATE = 44100
-        CHUNK = 1024
-        RECORD_SECONDS = 5
-
-        print("Opening stream")
-
-        stream = p.open(
-            format=FORMAT,
-            channels=CHANNELS,
-            rate=RATE,
-            input=True,
-            frames_per_buffer=CHUNK,
-        )
-
-        print("Recording...")
-        frames = []
-
-        # Record audio
-        # TODO: make this stop when user inputs 'stop',instead of just after 5 seconds.
-        for _ in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
-            data = stream.read(CHUNK)
-            frames.append(data)
-
-        # Close and terminate the stream
-        print("Finished recording.")
-        stream.stop_stream()
-        stream.close()
-        p.terminate()
-
-        # Save the audio data as a .wav file
-        with wave.open(self.WAVE_OUTPUT_FILENAME, "wb") as wf:
-            wf.setnchannels(CHANNELS)
-            wf.setsampwidth(p.get_sample_size(FORMAT))
-            wf.setframerate(RATE)
-            wf.writeframes(b"".join(frames))
-
-        return self.process()
 
     def process(self):
         self.state = State.PROCESSING
