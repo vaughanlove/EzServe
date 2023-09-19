@@ -4,9 +4,10 @@ import wave
 from google.cloud import aiplatform
 from google.cloud.speech_v2 import SpeechClient
 from google.cloud.speech_v2.types import cloud_speech
+import asyncio 
 
 class Transcriber(object):
-    WAVE_INPUT_FILENAME = "tmp/audio_file.wav"
+    WAVE_INPUT_FILENAME = "app/tmp/audio_file.wav"
 
     def __init__(self, trace=False, verbose=True) -> bool:
         google_project_id = os.getenv(
@@ -15,6 +16,8 @@ class Transcriber(object):
         aiplatform.init(project=google_project_id, location="us-central1")
 
     def transcribe(self) -> object:
+        #print("transcribing")
+
         client = SpeechClient()
 
         # Reads a file as bytes
@@ -37,9 +40,10 @@ class Transcriber(object):
         # Transcribes the audio into text
         response = client.recognize(request=request)
 
-        if response.results[0] != None:
+        if response.results[0] is not None:
             print("TRANSCRIPTION: " + response.results[0].alternatives[0].transcript)
             return response.results[0].alternatives[0].transcript
         else:
             print("Empty response")
             return "empty response"
+        

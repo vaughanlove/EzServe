@@ -22,7 +22,23 @@ class GetDetailedMenuTool(BaseTool):
 
     def _run(self, run_manager: Optional[CallbackManagerForToolRun] = None) -> str:
         """Get from square api"""
-        return square_order.menu
+        nice_menu = []
+
+        for obj in square_order.menu["objects"]:
+            for variation in obj["item_data"]["variations"]:
+                temp_item = (
+                    (
+                        variation["item_variation_data"]["name"]
+                        + " "
+                        + obj["item_data"]["name"]
+                    )
+                    .lower()
+                    .replace(",", "")
+                    .replace("(", "")
+                    .replace(")", "")
+                )
+                nice_menu.append(temp_item)
+        return nice_menu
 
 
 class FindItemIdSchema(BaseModel):

@@ -56,7 +56,7 @@ class Order(object):
             item_id (str): The item_id of the item.
             quantity (str): The amount of item to add.
         """
-        assert isinstance(quantity) == str, "Quantity parameter should be a string."
+        assert isinstance(quantity, str)
 
         # https://developer.squareup.com/explorer/square/orders-api/update-order
         body = {
@@ -94,7 +94,7 @@ class Order(object):
             item_id (str): The id from square corresponding to the ordered item.
             quantity (str): The number of item ordered.
         """
-        assert isinstance(quantity) == str, "Quantity parameter should be a string."
+        assert isinstance(quantity, str)
         body = {
             "order": {
                 "location_id": self._location_id,
@@ -186,9 +186,6 @@ class Order(object):
         result = self._square_client.catalog.list_catalog(types="ITEM")
         if result.is_success():
             #: list of str: The menu items.
-            self.menu = []
-            for obj in result.body["objects"]:
-                for variation in obj["item_data"]["variations"]:
-                    self.menu.append(variation["item_variation_data"]["name"] + " " + obj["item_data"]["name"])
+            self.menu = result.body
         else:
             return "ERROR: could not retrieve menu."

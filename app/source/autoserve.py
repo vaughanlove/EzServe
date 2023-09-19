@@ -9,6 +9,7 @@ from source.agent.tools import (
 )
 
 from source.audio.recorder import Recorder
+from source.audio.transcriber import Transcriber
 
 import os
 from enum import Enum
@@ -21,10 +22,12 @@ from google.cloud.speech_v2 import SpeechClient
 from google.cloud.speech_v2.types import cloud_speech
 
 from dotenv import load_dotenv
-import pyaudio
-import wave
 
 import asyncio
+
+stop_recording = asyncio.Event() 
+
+# want to start with it stopped.
 
 class State(Enum):
     RECORDING = 1
@@ -53,7 +56,8 @@ class AutoServe:
         self._load_env_vars(trace)
         self._setup_gcloud()
 
-        self.recorder = Recorder()
+        self.recorder = Recorder(trace=trace, verbose=verbose)
+        self.transcriber = Transcriber()
 
         self.llm = vertexai.VertexAI(temperature=0)
 
@@ -67,55 +71,40 @@ class AutoServe:
             verbose=verbose,
         )
 
+    async def handle_input(self):
+        print(f"""
+              Currently {self.state}. 
+              Press r to record.
+              Press s to stop recording.
+              """)
+        
+        while True:
+            user_input = await asyncio.to_thread(input, "")  # Take user input asynchronously
+            if user_input == 'r':
+                if self.state == State.RECORDING:
+                    print("Already recording!")
+                else:
+                    print("Starting the recording.")
+                    self.state=State.RECORDING
+                    stop_recording.clear()
+
+            elif user_input == 's':
+                if self.state != State.RECORDING:
+                    print("Not recording!")
+                elif self.state == State.RECORDING:
+                    print("Stopping the recording.")
+                    stop_recording.set()
+                    self.state = State.WAITING
+
+
     async def run(self):
-        print("starting async record")
+        stop_recording.set()
         # Start both tasks and run them concurrently
-        recordTask = asyncio.create_task(self.recorder.start())
+        record_task = asyncio.create_task(self.recorder.record(stop_recording))
+        input_task = asyncio.create_task(self.handle_input())
 
-        # here we want to listen for a flag being set when self.recorder finishes a recording.
-        # when that flag is initiated, the transcriber() should be called and subsequently 
-        # process() should be called.
-
-        await recordTask
-
-
-    def process(self):
-        self.state = State.PROCESSING
-        print("Start processing")
-        client = SpeechClient()
-
-        # Reads a file as bytes
-        with open(self.WAVE_OUTPUT_FILENAME, "rb") as f:
-            content = f.read()
-
-        config = cloud_speech.RecognitionConfig(
-            auto_decoding_config=cloud_speech.AutoDetectDecodingConfig(),
-            language_codes=["en-US"],
-            model="short",
-        )
-
-        project_id = os.getenv("SPEECH_PROJECT_ID")
-        request = cloud_speech.RecognizeRequest(
-            recognizer=f"projects/{project_id}/locations/global/recognizers/_",
-            config=config,
-            content=content,
-        )
-
-        # Transcribes the audio into text
-        response = client.recognize(request=request)
-
-        print("TRANSCRIPTION: " + response.results[0].alternatives[0].transcript)
-        # for result in response.results:
-        #    print(f"Transcript: {result.alternatives[0].transcript}")
-
-        agent_response = self.agent.run(response.results[0].alternatives[0].transcript)
-        self.state = State.WAITING
-        return agent_response
-
-    def stop(self) -> None:
-        self.state = State.PROCESSING
-
-        # do the speech=> text and load text into member variable
+        await input_task
+        await record_task
 
     def get_state(self) -> State:
         return self.state
@@ -147,7 +136,3 @@ class AutoServe:
             "GOOGLE_PROJECT_ID"
         )  # ie, confident-jackle-123456
         aiplatform.init(project=google_project_id, location="us-central1")
-
-    def _load_tools(self) -> None:
-        """Load in tools module"""
-        pass

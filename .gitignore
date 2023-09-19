@@ -10,3 +10,5 @@
 app/src/__pycache__/
 app/__pycache__
 app/tmp
+
+**/__pycache__/**
