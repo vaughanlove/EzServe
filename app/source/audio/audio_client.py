@@ -16,22 +16,25 @@ class AudioClient(object):
         
         Returns (str):  Transcript 
         """
-        # record audio until user inputted aync stop
+        # record audio to .wav until user inputted aync stop
         input("Press enter to start recording")
         recorder = Recorder()
         audio = recorder.record()
+        
+        if(audio):
+            # transcribe .wav audio to text
+            print("Transcribing...")
+            transcriber = Transcriber()
+            transcript = transcriber.transcribe()
+            print("Final transcription: " +transcript)
+            return transcript
+        
+        return "empty response"
 
-        print("Transcribing...")
-        transcriber = Transcriber()
-        transcript = transcriber.transcribe()
+#SAMPLE USAGE
+# def main():
+#     client = AudioClient()
+#     client.listen()
 
-        print("Final transcription: " +transcript)
-
-        return transcript
-
-def main():
-    client = AudioClient()
-    client.listen()
-
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()

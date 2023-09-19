@@ -16,7 +16,7 @@ class Recorder(object):
         self.CHUNK = 1024
         self.RECORD_SECONDS = 10
 
-    def record(self):
+    def record(self) -> bool:
         """opens audio stream and writes to wav file till stopped"""
         print("Opening stream")
 
@@ -50,4 +50,4 @@ class Recorder(object):
             wf.setframerate(self.RATE)
             wf.writeframes(b"".join(frames))
 
-        return
+        return True
