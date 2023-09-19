@@ -61,6 +61,7 @@ class AutoServe:
             self.llm,
             agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
             verbose=verbose,
+            handle_parsing_errors="Check your output and make sure it conforms!"
         )
 
     async def my_loop(self):
