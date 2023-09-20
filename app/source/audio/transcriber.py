@@ -7,7 +7,7 @@ from google.cloud.speech_v2 import SpeechClient
 from google.cloud.speech_v2.types import cloud_speech
 
 class Transcriber(object):
-    WAVE_INPUT_FILENAME = "tmp/audio_file.wav"
+    WAVE_INPUT_FILENAME = "app/tmp/audio_file.wav"
 
     def __init__(self, trace=False, verbose=True) -> bool:
         google_project_id = os.getenv(

@@ -1,4 +1,4 @@
-from google.cloud import translate_v2 as translate
+from google.cloud.translate_v2 import client as translate
 
 class Translator(object):
     def translate(self, text: str) -> object:
