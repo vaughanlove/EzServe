@@ -6,6 +6,10 @@ from source.agent.tools import (
     GetOrderTool,
 )
 
+from langchain.callbacks.streaming_stdout_final_only import (
+    FinalStreamingStdOutCallbackHandler,
+)
+
 from langchain.agents import AgentType, initialize_agent
 from langchain.llms import vertexai
 
@@ -13,7 +17,7 @@ class SquareClient():
     """
     """
     def __init__(self, trace=False, verbose=True) -> bool:
-        self.llm = vertexai.VertexAI(temperature=0)
+        self.llm = vertexai.VertexAI( streaming=True, callbacks=[FinalStreamingStdOutCallbackHandler()], temperature=0)
 
         self.tools = [
             GetDetailedMenuTool(),

@@ -3,9 +3,12 @@
 import pyaudio
 import wave
 import asyncio
+import re
 
 from source.audio.transcriber import Transcriber
 from source.agent.square_client import SquareClient
+from source.audio.translator import Translator
+
 
 class Recorder(object):
     WAVE_OUTPUT_FILENAME = "app/tmp/audio_file.wav"
@@ -19,6 +22,7 @@ class Recorder(object):
         self.recording = True
 
         self.t = Transcriber()
+        self.translator = Translator()
         self.agent = SquareClient(trace=trace, verbose=verbose)
 
     async def record(self, stop_recording):
@@ -65,8 +69,15 @@ class Recorder(object):
 
             # do the transcription
             transcript = self.t.transcribe()
+            result = self.translator.translate(transcript)
+            clean_result = re.sub(r'[^a-zA-Z0-9\s]', '', result)
 
-            agent_response = self.agent.run(transcript)
+            print("translation: " + result)
+            print("clean translation: " + clean_result)
+
+            agent_response = self.agent.run(result)
+
+            #remove special characters
 
             #play agent_response?
             print("AGENT: " + agent_response)
