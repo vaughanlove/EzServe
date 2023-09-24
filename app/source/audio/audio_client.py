@@ -4,6 +4,7 @@ import os
 from recorder import Recorder
 from transcriber import Transcriber
 from translator import Translator
+from speaker import Speaker
 
 class AudioClient(object):
     """Used by autoserve for handling audio input and transcription."""
@@ -36,10 +37,16 @@ class AudioClient(object):
         
         return "empty response"
 
+    def speak(self, text):
+        speaker = Speaker()
+        speaker.synthesize(text)
+
 #SAMPLE USAGE
 # def main():
 #     client = AudioClient()
-#     client.listen()
+#     text = client.listen()
+#     client.speak(text)
+
 
 # if __name__ == "__main__":
 #     main()
