@@ -11,4 +11,10 @@ app/src/__pycache__/
 app/__pycache__
 app/tmp
 
+virtual-terminal/bin
+virtual-terminal/include
+virtual-terminal/lib
+virtual-terminal/lib64
+virtual-terminal/share
+
 **/__pycache__/**
