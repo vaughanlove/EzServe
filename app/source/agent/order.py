@@ -67,11 +67,12 @@ class Order(object):
                         "quantity": quantity,
                     }
                 ],
-                "version": 1,
+                "version": self.order_version,
             },
             "idempotency_key": str(uuid4().hex),
         }
         result = self._square_client.orders.update_order(self._order_id, body)
+
         if result.is_success():
             item = result.body["order"]["line_items"][self.order_version]["name"]
             self.order_items.append(item)
@@ -80,12 +81,13 @@ class Order(object):
                     "base_price_money"
                 ]["amount"]
             )
-            self.order_version += 1
+            self.order_version = self.order_version + 1
             return f"Order for {item} was placed successfully."
         else:
-            return """There was an error, and the order failed to place successfully.
+            return """There was an error, and a part of the order failed to place successfully.
                     This could be because the item_id was incorrect, in which case, you 
-                    should find the correct item_id using the find_item_id_tool."""
+                    should find the correct item_id using the find_item_id_tool.
+                    Now tell the user what is in their order and the price."""
 
     def create_order(self, item_id, quantity):
         """Create a new order.
