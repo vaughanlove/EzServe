@@ -18,8 +18,27 @@ def translate(text: str) -> object:
 
     result = translate_client.translate(text, target_language="EN")
 
+
+    if result["translatedText"] is not None:
+        return result["detectedSourceLanguage"], result["translatedText"]
+    else:
+        return "en", """This is not a user input. The translation failsed
+                and no output was found. **important** 
+                now all you need to do is prompt the customer to try again."""
+    
+def translate_to_language(text: str, lang: str) -> object:
+
+    translate_client = client.Client()
+
+    if isinstance(text, bytes):
+        text = text.decode("utf-8")
+
+    result = translate_client.translate(text, target_language=lang)
+
+
     if result["translatedText"] is not None:
         return result["translatedText"]
     else:
-        return """This is not a user input. The translation failed and no output was found. **important** 
+        return """This is not a user input. The translation failsed
+                and no output was found. **important** 
                 now all you need to do is prompt the customer to try again."""

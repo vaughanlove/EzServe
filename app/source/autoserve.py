@@ -52,7 +52,7 @@ class AutoServe:
             while not recording_flag.is_set():
                 if shutdown_flag.is_set():
                     sys.exit()
-                await asyncio.sleep(0.05)
+                await asyncio.sleep(0.1)
 
             p = pyaudio.PyAudio()
 
@@ -93,12 +93,19 @@ class AutoServe:
             # do the transcription
             transcript = transcriber.transcribe()
 
-            result = translator.translate(transcript)
+            language, result = translator.translate(transcript)
             clean_result = re.sub(r"[^a-zA-Z0-9\s]", "", result)
 
+            print("detected language: " + language)
+
             agent_response = self.agent.run(clean_result)
-            # this is where we speech to text the agent_response.
-            # clear the processing_flag to allow new recordings
+            clean_agent_result = re.sub(r"[^a-zA-Z0-9\s]", "", agent_response)
+
+            print("agent response: " + agent_response)
+
+            translated_response = translator.translate_to_language(agent_response, language)
+
+            print(translated_response)
             processing_flag.clear()
 
     async def handle_input(self):

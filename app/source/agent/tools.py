@@ -5,6 +5,7 @@ from langchain.callbacks.manager import CallbackManagerForToolRun
 from typing import Optional, Type
 from pydantic import BaseModel, Field
 
+import json
 # import re
 
 from source.agent.order import Order
@@ -17,7 +18,7 @@ class GetDetailedMenuTool(BaseTool):
 
     name = "get_detailed_menu_tool"
     description = "helpful for listing the entire menu when details like size or flavor \
-        of an item are asked about. important** should not be used when ordering."
+        of an item are asked about. important** DO NOT USE THIS FOR ORDERING IF SOMEONE IS ASKING FOR THE MENU."
     args_schema: Type[None] = None
 
     def _run(self, run_manager: Optional[CallbackManagerForToolRun] = None) -> str:
@@ -103,6 +104,7 @@ class FindItemIdTool(BaseTool):
         self, name, run_manager: Optional[CallbackManagerForToolRun] = None
     ) -> str:
         """Check the menu for a similar match."""
+        items = []
         for obj in square_order.menu["objects"]:
             for variation in obj["item_data"]["variations"]:
                 temp_item = (
@@ -123,6 +125,7 @@ class FindItemIdTool(BaseTool):
                     .replace(")", "")
                     .split(" ")
                 )
+                items.append(temp_item)
                 same = True
                 # TOdo replace with regex
                 for ty in temp_item.split(" "):
@@ -131,8 +134,10 @@ class FindItemIdTool(BaseTool):
                 if same:
                     return variation["id"]
 
-        # todo: improve errors
-        return "The requested item was not found on the menu."
+        return f"""The requested item was not found on the menu. 
+                The available items to order are: {json.dumps(items)}, 
+                did the user order something similar? 
+                If so, you can call this tool again with the proper item name."""
 
 
 class GetOrderTool(BaseTool):
