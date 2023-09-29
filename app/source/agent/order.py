@@ -3,7 +3,6 @@
 TODO:
     Add exceptions
     Improve error handling
-    Write tests
 """
 
 from dotenv import load_dotenv
@@ -46,7 +45,7 @@ class Order(object):
         """Returns the items in the order."""
         return self.order_items
 
-    def add_item_to_order(self, item_id, quantity):
+    def add_item_to_order(self, item_id: str, quantity: str):
         """Adds an item to the order.
 
         Todo:
@@ -56,7 +55,6 @@ class Order(object):
             item_id (str): The item_id of the item.
             quantity (str): The amount of item to add.
         """
-        assert isinstance(quantity, str)
 
         # https://developer.squareup.com/explorer/square/orders-api/update-order
         body = {
@@ -85,7 +83,9 @@ class Order(object):
             self.order_version += 1
             return f"Order for {item} was placed successfully."
         else:
-            return "ERROR: call to square api to update order failed."
+            return """There was an error, and the order failed to place successfully.
+                    This could be because the item_id was incorrect, in which case, you 
+                    should find the correct item_id using the find_item_id_tool."""
 
     def create_order(self, item_id, quantity):
         """Create a new order.
@@ -119,7 +119,7 @@ class Order(object):
             self._order_id = result.body["order"]["id"]
             return f"Order for {item} was placed successfully."
         else:
-            return "ERROR: square create_order call threw an error."
+            return "The order failed to create. Please try again."
 
     def start_checkout(self):
         """Start a checkout on a square terminal."""
@@ -151,7 +151,9 @@ class Order(object):
             self._checkout_id = result.body["checkout"]["id"]
             return "Checkout was successful, have a good day!"
         else:
-            return "ERROR: square create_order call threw an error."
+            return """The square terminal failed to initiate a checkout. The 
+                    order is ongoing and still needs to be paid for. Let the 
+                    user reprompt."""
 
     def cancel_checkout(self):
         assert self._checkout_id != "", "Missing Checkout ID"
@@ -162,7 +164,7 @@ class Order(object):
             self.checkout_id = ""
             return "Checkout successfully cancelled. Feel free to continue ordering."
         else:
-            return "ERROR: checkout could not be cancelled"
+            return "Checkout could not be cancelled"
 
     def __setup_client(self):
         """Load in environment variables and initialize the square client."""
@@ -170,7 +172,6 @@ class Order(object):
         self._square_api_key = os.getenv("API_KEY")  #: Square API key
         self._location_id = os.getenv("LOCATION")  #: Square Location ID
         self._square_device_id = os.getenv("DEVICE")  #: Square Device ID
-        #: _square_client ():obj:`Client`): The square client sdk
         self._square_client = Client(
             square_version="2023-08-16",
             access_token=self._square_api_key,
@@ -185,7 +186,6 @@ class Order(object):
         """
         result = self._square_client.catalog.list_catalog(types="ITEM")
         if result.is_success():
-            #: list of str: The menu items.
             self.menu = result.body
         else:
             return "ERROR: could not retrieve menu."

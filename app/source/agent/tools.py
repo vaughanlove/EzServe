@@ -64,8 +64,9 @@ class OrderTool(BaseTool):
     """Tool for creating and updating orders."""
 
     name = "order_tool"
-    description = "For creating new orders or adding items to existing orders. Use \
-        after find_item_id_tool."
+    description = """This tool is for creating new orders or adding items to existing
+                   orders. Before calling this, get the item_id using the tool named
+                   find_item_id_tool."""
     args_schema: Type[OrderSchema] = OrderSchema
 
     def _run(
@@ -83,8 +84,8 @@ class OrderTool(BaseTool):
 class MakeOrderCheckoutTool(BaseTool):
     """Tool for initiating a checkout on a square terminal."""
     name = "make_order_checkout"
-    description = "for when the customer wants to checkout their order. \
-        Important** ONLY call this when the customer is asking to check out."
+    description ="""For when the customer requests to checkout their order.
+        **IMPORTANT** Only call this when the customer is asking to check out."""
 
     def _run(self, run_manager: Optional[CallbackManagerForToolRun] = None) -> str:
         return square_order.start_checkout()
@@ -93,8 +94,9 @@ class MakeOrderCheckoutTool(BaseTool):
 class FindItemIdTool(BaseTool):
     """Tool for finding the square id corresponding to the natural language input item"""
     name = "find_item_id_tool"
-    description = "For finding the item IDs corresponding to the name of a menu item. \
-        Do not hallucinate."
+    description = """Usually need to use this tool before using the Order tool.
+                    For finding the item IDs corresponding to the name of a menu item.
+                    Do not hallucinate."""
     args_schema: Type[FindItemIdSchema] = FindItemIdSchema
 
     def _run(
@@ -130,14 +132,15 @@ class FindItemIdTool(BaseTool):
                     return variation["id"]
 
         # todo: improve errors
-        return "Error: cannot find item in menu."
+        return "The requested item was not found on the menu."
 
 
 class GetOrderTool(BaseTool):
     """Tool for getting the order """
     name = "get_order_tool"
-    description = "for retrieving the items in the customer's order."
-
+    description = """This tool is for retrieving the items in the customer's order.
+                    Only call this when the customer requests, or you find 
+                    appropriate."""
     def _run(self, run_manager: Optional[CallbackManagerForToolRun] = None) -> str:
         """Return the customer's current order"""
         return square_order.order_items

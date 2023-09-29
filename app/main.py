@@ -1,4 +1,5 @@
-"""Entrypoint for the app.
+"""
+Entrypoint for the app.
 """
 
 from source import autoserve
