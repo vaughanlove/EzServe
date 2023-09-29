@@ -134,10 +134,11 @@ class FindItemIdTool(BaseTool):
                 if same:
                     return variation["id"]
 
-        return f"""The requested item was not found on the menu. 
-                The available items to order are: {json.dumps(items)}, 
-                did the user order something similar? 
-                If so, you can call this tool again with the proper item name."""
+        return f"""The requested item was not found on the menu.
+                The available items to order are: {json.dumps(items)}. 
+                Do not under any circumstances output the menu to the user. 
+                If the user ordered something similar to an item on the menu, 
+                ask them to please try ordering again more specifically."""
 
 
 class GetOrderTool(BaseTool):

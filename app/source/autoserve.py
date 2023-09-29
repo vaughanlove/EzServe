@@ -99,7 +99,6 @@ class AutoServe:
             print("detected language: " + language)
 
             agent_response = self.agent.run(clean_result)
-            clean_agent_result = re.sub(r"[^a-zA-Z0-9\s]", "", agent_response)
 
             print("agent response: " + agent_response)
 
