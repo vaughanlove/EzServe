@@ -7,6 +7,7 @@ to start/stop recording, and initiates the audio processing.
 
 import source.audio.translator as translator
 import source.audio.transcriber as transcriber
+import source.audio.speaker as speaker
 from source.agent.square_client import SquareClient
 
 import pyaudio
@@ -103,7 +104,8 @@ class AutoServe:
             print("agent response: " + agent_response)
 
             translated_response = translator.translate_to_language(agent_response, language)
-
+            
+            speaker.text_to_speech(translated_response)
             print(translated_response)
             processing_flag.clear()
 

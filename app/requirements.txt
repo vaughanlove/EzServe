@@ -5,3 +5,4 @@ pydantic==2.4.2
 python-dotenv==1.0.0
 recorder==0.0.2
 squareup==30.0.0.20230816
+google-cloud-texttospeech==2.14.1

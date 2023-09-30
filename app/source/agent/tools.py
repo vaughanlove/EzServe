@@ -66,8 +66,8 @@ class OrderTool(BaseTool):
 
     name = "order_tool"
     description = """This tool is for creating new orders or adding items to existing
-                   orders. Before calling this, get the item_id using the tool named
-                   find_item_id_tool."""
+                    orders. Before calling this, use find_item_id_tool to
+                    get the item_id. Do not hallucinate or make up an item_id"""
     args_schema: Type[OrderSchema] = OrderSchema
 
     def _run(
@@ -95,9 +95,10 @@ class MakeOrderCheckoutTool(BaseTool):
 class FindItemIdTool(BaseTool):
     """Tool for finding the square id corresponding to the natural language input item"""
     name = "find_item_id_tool"
-    description = """Usually need to use this tool before using the Order tool.
-                    For finding the item IDs corresponding to the name of a menu item.
-                    Do not hallucinate."""
+    description = """This tool is for finding the item IDs corresponding to the name of a menu item.
+                    Do not hallucinate.
+                    You should use this tool before using the Order tool.
+                    """
     args_schema: Type[FindItemIdSchema] = FindItemIdSchema
 
     def _run(
@@ -134,11 +135,8 @@ class FindItemIdTool(BaseTool):
                 if same:
                     return variation["id"]
 
-        return f"""The requested item was not found on the menu.
-                The available items to order are: {json.dumps(items)}. 
-                Do not under any circumstances output the menu to the user. 
-                If the user ordered something similar to an item on the menu, 
-                ask them to please try ordering again more specifically."""
+        return """The requested item was not found on the menu.
+                ask the customer to please try ordering again more specifically."""
 
 
 class GetOrderTool(BaseTool):
