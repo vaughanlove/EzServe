@@ -7,7 +7,8 @@ to start/stop recording, and initiates the audio processing.
 
 import source.audio.translator as translator
 import source.audio.transcriber as transcriber
-from source.agent.square_client import SquareClient
+import source.audio.speaker as speaker
+from source.agents.agentv2.agent import Agent # this import is gross
 
 import pyaudio
 import wave
@@ -15,10 +16,14 @@ import asyncio
 import re
 import sys
 import os
+import logging
 
 from google.cloud import aiplatform
 
 from dotenv import load_dotenv
+
+log = logging.getLogger("autoserve")
+logging.basicConfig(level=logging.INFO)
 
 recording_flag = asyncio.Event()
 processing_flag = asyncio.Event()
@@ -103,7 +108,8 @@ class AutoServe:
             print("agent response: " + agent_response)
 
             translated_response = translator.translate_to_language(agent_response, language)
-
+            
+            speaker.text_to_speech(translated_response)
             print(translated_response)
             processing_flag.clear()
 
@@ -159,5 +165,5 @@ class AutoServe:
         self.rate = 44100
         self.chunk = 1024
 
-        self.agent = SquareClient(verbose=verbose)
+        self.agent = Agent()
     
