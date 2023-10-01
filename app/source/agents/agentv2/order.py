@@ -45,7 +45,7 @@ class Order(object):
         """Returns the items in the order."""
         return self.order_items
 
-    def add_item_to_order(self, item_id: str, quantity: str):
+    def add_item_to_order(self, item_id: str, quantity: str, note: str) -> bool:
         """Adds an item to the order.
 
         Todo:
@@ -54,6 +54,7 @@ class Order(object):
         Args:
             item_id (str): The item_id of the item.
             quantity (str): The amount of item to add.
+            note (str): notes for that specific item order.
         """
 
         # https://developer.squareup.com/explorer/square/orders-api/update-order
@@ -65,6 +66,7 @@ class Order(object):
                         "catalog_object_id": item_id,
                         "item_type": "ITEM",
                         "quantity": quantity,
+                        "note": note,
                     }
                 ],
                 "version": self.order_version,
@@ -82,19 +84,17 @@ class Order(object):
                 ]["amount"]
             )
             self.order_version = self.order_version + 1
-            return f"Order for {item} was placed successfully."
+            return True
         else:
-            return """There was an error, and a part of the order failed to place successfully.
-                    This could be because the item_id was incorrect, in which case, you 
-                    should find the correct item_id using the find_item_id_tool.
-                    Now tell the user what is in their order and the price."""
+            return False
 
-    def create_order(self, item_id, quantity):
+    def create_order(self, item_id: str, quantity: str, note: str) -> bool:
         """Create a new order.
 
         Args:
             item_id (str): The id from square corresponding to the ordered item.
             quantity (str): The number of item ordered.
+            note (str): notes for that specific item order.
         """
         assert isinstance(quantity, str)
         body = {
@@ -105,6 +105,7 @@ class Order(object):
                         "catalog_object_id": item_id,
                         "item_type": "ITEM",
                         "quantity": quantity,
+                        "note": note,
                     }
                 ],
             },
@@ -119,9 +120,9 @@ class Order(object):
                 result.body["order"]["line_items"][0]["base_price_money"]["amount"]
             )
             self._order_id = result.body["order"]["id"]
-            return f"Order for {item} was placed successfully."
+            return True
         else:
-            return "The order failed to create. Please try again."
+            return False
 
     def start_checkout(self):
         """Start a checkout on a square terminal."""
@@ -151,11 +152,9 @@ class Order(object):
             self.order_total_cost = 0
             self.order_items = []
             self._checkout_id = result.body["checkout"]["id"]
-            return "Checkout was successful, have a good day!"
+            return True
         else:
-            return """The square terminal failed to initiate a checkout. The 
-                    order is ongoing and still needs to be paid for. Let the 
-                    user reprompt."""
+            return False
 
     def cancel_checkout(self):
         assert self._checkout_id != "", "Missing Checkout ID"
