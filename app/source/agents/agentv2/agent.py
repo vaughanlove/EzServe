@@ -21,7 +21,7 @@ class Agent():
     def run(self, user_input: str) -> str:
         return self.agent_executor.run(user_input)
 
-    def __init__(self):
+    def __init__(self, verbose):
         """initializes the agent's tools, prompt template, llm, output_parser."""
         # add tools you want the agent to use.
         self.tools = [
@@ -54,7 +54,7 @@ class Agent():
         self.agent_executor = AgentExecutor.from_agent_and_tools(
             agent=self.agent,
             tools=self.tools,
-            verbose=True
+            verbose=verbose
         )
 
 

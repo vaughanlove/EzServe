@@ -165,5 +165,5 @@ class AutoServe:
         self.rate = 44100
         self.chunk = 1024
 
-        self.agent = Agent()
+        self.agent = Agent(verbose=True)
     
