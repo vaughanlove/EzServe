@@ -17,7 +17,7 @@ def text_to_speech(text: str):
 
     # Select the type of audio file you want returned
     audio_config = texttospeech.AudioConfig(
-        audio_encoding=texttospeech.AudioEncoding.MP3
+        audio_encoding=texttospeech.AudioEncoding.LINEAR16
     )
 
     # Perform the text-to-speech request on the text input with the selected
@@ -26,20 +26,20 @@ def text_to_speech(text: str):
         input=synthesis_input, voice=voice, audio_config=audio_config
     )    
 
-    play_mp3_bytes(response.audio_content)
+    play_wav_bytes(response.audio_content)
 
-def play_mp3_bytes(mp3_bytes):
+def play_wav_bytes(wav_bytes):
     # Initialize PyAudio
     p = pyaudio.PyAudio()
 
     # Open a PyAudio stream
-    stream = p.open(format=pyaudio.paFloat32,
+    stream = p.open(format=pyaudio.paInt16,
                     channels=1,
-                    rate=32000,
+                    rate=25000,
                     output=True)
 
     # Play the audio data
-    stream.write(mp3_bytes)
+    stream.write(wav_bytes)
 
     # Close the stream when finished
     stream.stop_stream()
