@@ -3,7 +3,6 @@ from google.cloud import texttospeech
 client = texttospeech.TextToSpeechClient()
 import pyaudio
 import wave
-from pydub import AudioSegment
 
 def text_to_speech(text: str):
     # Set the text input to be synthesized

@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 import os
 from uuid import uuid4
 from square.client import Client
+import json
 
 
 class Order(object):
@@ -74,7 +75,6 @@ class Order(object):
             "idempotency_key": str(uuid4().hex),
         }
         result = self._square_client.orders.update_order(self._order_id, body)
-
         if result.is_success():
             item = result.body["order"]["line_items"][self.order_version]["name"]
             self.order_items.append(item)
