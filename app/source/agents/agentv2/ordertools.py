@@ -13,12 +13,20 @@ square_order = Order()
 def get_item_details(item_string: str) -> str:
     """When people are wondering about details of their dish"""
     # try to convert the JSON string into a List[dict].
-    # if that fails, its usually just the name of an item. 
+    # if that fails, its usually just the name of an item.
+    # TODO: move all this input checking into own function
+    
+    if item_string == None:
+        return "Cannot find the item you requested."
+     
     text_json = {}
     try: 
         text_json = json.loads(item_string)
     except:
         text_json = {"item_name" : item_string}
+
+    if text_json == None:
+        return "Cannot find the item you requested."    
 
     # make sure theres content.
     if len(text_json) == 0:
@@ -50,6 +58,9 @@ def order(
         text_json = json.loads(order_string)
     except:
         return "order_string was not valid JSON."
+    
+    if text_json == None:
+        return "Cannot find the item you requested."    
 
     # check for content
     if len(text_json) == 0:
@@ -63,8 +74,11 @@ def order(
                     note = ""
                 else: 
                     note = text_json[i]["order_note"]
-            print(text_json[i]["item_name"] + " " + note)
-            vec_similarities.append(db.query(text_json[i]["item_name"] + " " + note))
+            search_string = text_json[i]["item_name"] + " " + note
+            print(search_string)
+            augment_item = db.query(search_string)
+            print(augment_item)
+            vec_similarities.append(augment_item)
 
     print(vec_similarities)    
     if len(vec_similarities) == 0 or vec_similarities == [[]]:
