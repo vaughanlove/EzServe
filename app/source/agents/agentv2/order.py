@@ -176,7 +176,7 @@ class Order(object):
         self._square_client = Client(
             square_version="2023-08-16",
             access_token=self._square_api_key,
-            environment="sandbox",
+            environment="production",
         )
 
     def __init_menu(self):

@@ -23,7 +23,7 @@ def transcribe() -> object:
         model="chirp",
     )
 
-    project_id = os.getenv("SPEECH_PROJECT_ID")
+    project_id = os.getenv("GOOGLE_PROJECT_ID")
     request = cloud_speech.RecognizeRequest(
         recognizer=f"projects/{project_id}/locations/us-central1/recognizers/_",
         config=config,
