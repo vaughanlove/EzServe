@@ -78,7 +78,10 @@ def order(
             print(search_string)
             augment_item = db.query(search_string)
             print(augment_item)
-            vec_similarities.append(augment_item)
+            if len(augment_item) == 0:
+                failed_orders.append(search_string) 
+            else:
+                vec_similarities.append(augment_item)
 
     print(vec_similarities)    
     if len(vec_similarities) == 0 or vec_similarities == [[]]:
@@ -123,7 +126,7 @@ def order(
     if len(failed_orders) == 0:
         return f"Your orders for {succeeded_orders}! Your total is now {square_order.get_order_total()}."
     else:
-        return f"""The orders for {succeeded_orders} succeeded, but the orders for {failed_orders} failed."""
+        return f"""The orders for {', '.join(succeeded_orders)} succeeded, but the orders for {', '.join(failed_orders)} failed."""
 
 # Below are all the tools.
 OrderTool = Tool(
