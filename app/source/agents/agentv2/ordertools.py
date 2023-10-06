@@ -78,7 +78,7 @@ def order(
             print(search_string)
             augment_item = db.query(search_string)
             print(augment_item)
-            if len(augment_item) == 0:
+            if augment_item == []:
                 failed_orders.append(search_string) 
             else:
                 vec_similarities.append(augment_item)
@@ -99,8 +99,11 @@ def order(
         # TODO: if vector distance >= 1, reaffirm with the user what they ordered, and allow them to change.
 
         note = text_json[i]["order_note"] if "order_note" in text_json[i].keys() else ""
-        
-        if not square_order.order_ongoing:
+
+        # sanity check. can probably remove 
+        if vec_similarities[i] == []:
+            continue
+        elif not square_order.order_ongoing:
             # TODO: add error handling
             # please comment this
             success = square_order.create_order(
