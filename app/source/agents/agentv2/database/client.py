@@ -20,18 +20,17 @@ class DatabaseClient(object):
 
     def __init__(self):
         load_dotenv()
-        logger.info("Initializing the chromadb client.")
+        logger.info("Initializing the weaviate client.")
         self.client = weaviate.Client(embedded_options=EmbeddedOptions())
-        self.items = []
-        self.ids = []
-        self.metadatas = []
-        self.__GetData()
-        #self.__PopulateDatabase()
+        try:
+            self.__GetData()
+        except:
+            print("failed to get data. This is likely bc you are using a sandbox API when it is set to production.")
 
     def __GetData(self):
         square_client = Client(
             access_token=os.getenv("API_KEY"),
-            environment='sandbox'
+            environment=os.getenv("SQUARE_ENVIRONMENT")
         )
 
         logger.info("CHROMADB: Fetching menu from square api.")
@@ -46,16 +45,18 @@ class DatabaseClient(object):
                 # if the item has a cost. In the event the square owner didn't set a price,
                 # don't let a user get free items.
                 if "price_money" in variation["item_variation_data"].keys():
-                    #self.items.append(clean_item)
-                    #self.metadatas.append({"price" : variation["item_variation_data"]["price_money"]["amount"]})
-                    #self.ids.append(variation["id"])
+                    # if the square response doesn't have a description for the item
+                    desc = 'There is no description for this item.'
+                    if 'description' in obj["item_data"].keys():
+                        desc = obj["item_data"]["description"]
                     data_obj = {
                         "name": clean_item,
                         "item_id": variation["id"],
-                        "price": variation["item_variation_data"]["price_money"]["amount"]
+                        "price": variation["item_variation_data"]["price_money"]["amount"],
+                        "description": desc
                     }
                     self.client.data_object.create(data_obj, "menu_item")
                     
     def query(self, item: List[str]):
-        res =  self.client.query.get("menu_item", ["name", "item_id", "price"]).with_bm25(query=item).with_limit(2).do()
-        return res
+        res =  self.client.query.get("menu_item", ["name", "item_id", "price", "description"]).with_bm25(query=item).with_limit(1).do()
+        return res['data']['Get']['Menu_item']

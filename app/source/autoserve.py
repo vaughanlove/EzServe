@@ -10,12 +10,16 @@ import source.audio.transcriber as transcriber
 import source.audio.speaker as speaker
 from source.agents.agentv2.agent import Agent # this import is gross
 
-import pyaudio
-import wave
+import tempfile
+import sounddevice as sd
+from scipy.io.wavfile import write
+import soundfile as sf
+
 import asyncio
 import re
 import sys
 import os
+import glob
 import logging
 
 from google.cloud import aiplatform
@@ -23,7 +27,8 @@ from google.cloud import aiplatform
 from dotenv import load_dotenv
 
 log = logging.getLogger("autoserve")
-logging.basicConfig(level=logging.INFO)
+#logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 recording_flag = asyncio.Event()
 processing_flag = asyncio.Event()
@@ -36,7 +41,6 @@ class AutoServe:
     history = []
     transcribed_string = None
 
-    WAVE_OUTPUT_FILENAME = "app/tmp/audio_file.wav"
     agent = None
     llm = None
 
@@ -49,69 +53,53 @@ class AutoServe:
         await record_task
 
     async def record(self):
-        """
-        Opens audio stream and awaits a stop flag.
-        Once stopped, sets the processing flag and initiates the audio processing.
-        """
-        while True:
-            while not recording_flag.is_set():
-                if shutdown_flag.is_set():
-                    sys.exit()
-                await asyncio.sleep(0.1)
+        #WAVE_OUTPUT_FILENAME = "app/tmp/audio.wav" --tempfile.mktemp(prefix='audio_input', suffix='.wav', dir='') -'/home/dom/Desktop/autoserve/EzServe/app/audio_input.wav'
+        with sf.SoundFile(tempfile.NamedTemporaryFile(dir="app/", delete=True, suffix='.wav'), mode='x', samplerate=self.samplerate,channels=self.channels, subtype=None) as file:
+            while True:
+                while not recording_flag.is_set():
+                    if shutdown_flag.is_set():
+                        sys.exit()
+                    await asyncio.sleep(0.1)
+                    
+                loop = asyncio.get_event_loop()
+                record = asyncio.Event()
+                
+                while recording_flag.is_set():
+                    def callback(indata, frame_count, time_info, status):
+                            if status:
+                                print(status)
+                            if not recording_flag.is_set():
+                                loop.call_soon_threadsafe(record.set)
+                                raise sd.CallbackStop
+                            file.write(indata)
+                    with sd.InputStream(samplerate=self.samplerate, device=None,channels=self.channels, callback=callback):
+                        await record.wait()
+				
+				# clear the recording flag for next i/o
+                recording_flag.clear()
+                record.clear()
+                
+                # set the processing_flag to block any initiate recording inputs.
+                processing_flag.set()
 
-            p = pyaudio.PyAudio()
+                # do the transcription
+                transcript = transcriber.transcribe()
 
-            stream = p.open(
-                format=self.format,
-                channels=self.channels,
-                rate=self.rate,
-                input=True,
-                frames_per_buffer=self.chunk,
-            )
-            frames = []
+                language, result = translator.translate(transcript)
+                clean_result = re.sub(r"[^a-zA-Z0-9\s]", "", result)
 
-            while recording_flag.is_set():
-                data = stream.read(self.chunk)
-                frames.append(data)
-                # 1 / hz = seconds/sample.
-                await asyncio.sleep(1 / self.rate)
+                print("detected language: " + language)
 
-            # Close and terminate the stream
-            stream.stop_stream()
-            stream.close()
-            sample_width = p.get_sample_size(self.format)
-            p.terminate()
+                agent_response = self.agent.run(clean_result)
 
-            # Save the audio data as a .wav file
-            with wave.open(self.WAVE_OUTPUT_FILENAME, "wb") as wf:
-                wf.setnchannels(self.channels)
-                wf.setsampwidth(sample_width)
-                wf.setframerate(self.rate)
-                wf.writeframes(b"".join(frames))
-                wf.close()
-
-            # clear the recording flag for next i/o
-            recording_flag.clear()
-            # set the processing_flag to block any initiate recording inputs.
-            processing_flag.set()
-
-            # do the transcription
-            transcript = transcriber.transcribe()
-
-            language, result = translator.translate(transcript)
-            clean_result = re.sub(r"[^a-zA-Z0-9\s]", "", result)
-
-            print("detected language: " + language)
-
-            agent_response = self.agent.run(clean_result)
-
-            print("agent response: " + agent_response)
-
-            translated_response = translator.translate_to_language(agent_response, language)
-            
-            speaker.text_to_speech(translated_response)
-            print(translated_response)
-            processing_flag.clear()
+                print("agent response: " + agent_response)
+                print("SPEAKER")
+                #speaker.text_to_speech(agent_response)
+                # playback_task = asyncio.create_task(speaker.text_to_speech(agent_response))
+                # await playback_task
+                translated_response = translator.translate_to_language(agent_response, language)
+                print(translated_response)
+                processing_flag.clear()
 
     async def handle_input(self):
         print("""
@@ -159,11 +147,8 @@ class AutoServe:
         self._load_env_vars(trace)
         self._setup_gcloud()
 
-        # pyaudio settings
-        self.format = pyaudio.paInt16
         self.channels = 1
-        self.rate = 44100
+        self.samplerate = 44100
         self.chunk = 1024
 
         self.agent = Agent(verbose=True)
-    
