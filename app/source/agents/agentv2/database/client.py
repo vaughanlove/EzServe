@@ -24,7 +24,7 @@ class DatabaseClient(object):
         self.client = weaviate.Client(embedded_options=EmbeddedOptions())
         try:
             self.__GetData()
-        except e:
+        except:
             print("failed to get data. This is likely bc you are using a sandbox API when it is set to production.")
 
     def __GetData(self):
@@ -46,7 +46,7 @@ class DatabaseClient(object):
                 # don't let a user get free items.
                 if "price_money" in variation["item_variation_data"].keys():
                     # if the square response doesn't have a description for the item
-                    desc = 'There is no description of this item. Feel free to hallucinate to answer.'
+                    desc = 'There is no description for this item.'
                     if 'description' in obj["item_data"].keys():
                         desc = obj["item_data"]["description"]
                     data_obj = {
@@ -58,5 +58,5 @@ class DatabaseClient(object):
                     self.client.data_object.create(data_obj, "menu_item")
                     
     def query(self, item: List[str]):
-        res =  self.client.query.get("menu_item", ["name", "item_id", "price", "description"]).with_bm25(query=item).with_limit(2).do()
-        return res
+        res =  self.client.query.get("menu_item", ["name", "item_id", "price", "description"]).with_bm25(query=item).with_limit(1).do()
+        return res['data']['Get']['Menu_item']

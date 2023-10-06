@@ -12,55 +12,63 @@ square_order = Order()
 
 def get_item_details(item_string: str) -> str:
     """When people are wondering about details of their dish"""
+    # try to convert the JSON string into a List[dict].
+    # if that fails, its usually just the name of an item. 
     text_json = {}
     try: 
         text_json = json.loads(item_string)
-    except e:
-        return "order_string was not valid JSON."
-    
-    print(text_json)
-    
+    except:
+        text_json = {"item_name" : item_string}
+
+    # make sure theres content.
     if len(text_json) == 0:
         return "Nothing to order in order_string."
-    else:
-        vec_similarities = [] 
-        for x in text_json:
-            temp = x
-            note = ""
-            if isinstance(x, str):
-                vec_similarities.append(db.query(x))
+    
+    vec_similarities = [] 
+    for x in text_json.values():
+        temp = x
+        if isinstance(x, str):
+            vec_similarities.append(db.query(x))
+        elif "item_name" in temp.keys():
+            # append the similar items found in the database
+            vec_similarities.append(db.query(temp["item_name"]))
 
-            elif "order_note" in temp.keys():
-                if temp["order_note"] == None:
-                    note = ""
-                else:
-                    note = temp["order_note"]
-                vec_similarities.append(db.query(temp["item_name"]))
+    print(vec_similarities)
 
-    if len(vec_similarities) == 0:
-        return "there were no dishes similar to the one you requested."    
-    return vec_similarities[0]['data']['Get']['Menu_item'][0]['description']
+    # if there was nothing similar
+    if len(vec_similarities) == 0 or vec_similarities == [[]]:
+        return "there were no dishes similar to the ones you requested."  
+    return vec_similarities[0][0]['description']
 
 # used in OrderTool
 def order(
         order_string: str,
     ) -> str:
 
+    # try convert the input JSON string to a dict.
     try: 
         text_json = json.loads(order_string)
-    except e:
+    except:
         return "order_string was not valid JSON."
-    
-    print(text_json)
 
+    # check for content
     if len(text_json) == 0:
         return "Nothing to order in order_string."
     else:
-        vec_similarities = [db.query(x["item_name"] + " " + (x["order_note"] if "order_note" in x.keys() else ""))['data']['Get']['Menu_item'] for x in text_json] 
-    
-    print(vec_similarities)
-    if len(vec_similarities) == 0:
-        return "Nothing you ordered on the menu is available."
+        vec_similarities = []
+        for i in range(len(text_json)):
+            note = ""
+            if "order_note" in text_json[i].keys():
+                if text_json[i]["order_note"] == None:
+                    note = ""
+                else: 
+                    note = text_json[i]["order_note"]
+            print(text_json[i]["item_name"] + " " + note)
+            vec_similarities.append(db.query(text_json[i]["item_name"] + " " + note))
+
+    print(vec_similarities)    
+    if len(vec_similarities) == 0 or vec_similarities == [[]]:
+        return "Nothing you ordered is available on the menu."
     # since our prompt is made to store details about each item, the item_name in
     # the text_json dict can be verbose. From testing, the general item ordered is
     # correct 99% of the time, but perhaps when distance >= 1, we should add
@@ -77,8 +85,9 @@ def order(
         
         if not square_order.order_ongoing:
             # TODO: add error handling
+            # please comment this
             success = square_order.create_order(
-                vec_similarities[0][0]['item_id'],
+                vec_similarities[i][0]['item_id'],
                 text_json[i]["quantity_ordered"],
                 note
             )
@@ -87,13 +96,11 @@ def order(
             else:
                 succeeded_orders.append(vec_similarities[i][0]["name"])
         else:
-            # really need to do graceful error handling, and keep track of what items were not ordered.
             success = square_order.add_item_to_order(
                 vec_similarities[i][0]['item_id'],
                 text_json[i]["quantity_ordered"],
                 note
             )
-
             if not success:
                 failed_orders.append(vec_similarities[i][0]["name"])
             else:
@@ -108,11 +115,13 @@ def order(
 OrderTool = Tool(
     name = "order_tool",
     description = "This tool is for creating new orders or adding items to existing orders.",
+    return_direct=True, # dont want order tool to get called.
     func=order,
 )
 
 DescriptionTool = Tool(
     name = "get_item_details",
     description = "This tool is for getting descriptions for an item for customers.",
+    return_direct=True, # dont want order tool to get called.
     func=get_item_details,
 )
