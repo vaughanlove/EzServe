@@ -20,7 +20,7 @@ class DatabaseClient(object):
 
     def __init__(self):
         load_dotenv()
-        logger.info("Initializing the chromadb client.")
+        logger.info("Initializing the weaviate client.")
         self.client = weaviate.Client(embedded_options=EmbeddedOptions())
         try:
             self.__GetData()
@@ -30,7 +30,7 @@ class DatabaseClient(object):
     def __GetData(self):
         square_client = Client(
             access_token=os.getenv("API_KEY"),
-            environment='production'
+            environment=os.getenv("SQUARE_ENVIRONMENT")
         )
 
         logger.info("CHROMADB: Fetching menu from square api.")

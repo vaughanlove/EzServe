@@ -80,7 +80,7 @@ class Order(object):
             self.order_items.append(item)
             self.order_total_cost += int(
                 result.body["order"]["line_items"][self.order_version][
-                    "base_price_money"
+                    "gross_sales_money"
                 ]["amount"]
             )
             self.order_version = self.order_version + 1
@@ -117,7 +117,7 @@ class Order(object):
             self.order_ongoing = True
             self.order_items.append(item)
             self.order_total_cost += int(
-                result.body["order"]["line_items"][0]["base_price_money"]["amount"]
+                result.body["order"]["line_items"][0]["gross_sales_money"]["amount"]
             )
             self._order_id = result.body["order"]["id"]
             return True
@@ -176,7 +176,7 @@ class Order(object):
         self._square_client = Client(
             square_version="2023-08-16",
             access_token=self._square_api_key,
-            environment="production",
+            environment=os.getenv("SQUARE_ENVIRONMENT"),
         )
 
     def __init_menu(self):
