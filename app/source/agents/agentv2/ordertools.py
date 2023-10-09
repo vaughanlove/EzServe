@@ -60,10 +60,7 @@ def order(
         return "order_string was not valid JSON."
     
     if text_json == None:
-        return "Cannot find the item you requested."
-        
-    succeeded_orders = []
-    failed_orders = []    
+        return "Cannot find the item you requested."    
 
     # check for content
     if len(text_json) == 0:
@@ -95,6 +92,8 @@ def order(
     # human-in-the-loop to verify or clarify that certain item.
     # I don't think the other orders should fail, so add HITL after placing orders.
 
+    succeeded_orders = []
+    failed_orders = []
 
     for i in range(len(vec_similarities)):
         # TODO: if vector distance >= 1, reaffirm with the user what they ordered, and allow them to change.
