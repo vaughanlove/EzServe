@@ -8,4 +8,5 @@ import asyncio
 #verbose here is referring to the langchain AgentExecutor logic.
 server = autoserve.AutoServe(verbose=True)
 
+#server.agent.run("I would like a small bluberry muffin")
 asyncio.run(server.run())

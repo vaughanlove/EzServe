@@ -127,7 +127,7 @@ def order(
                 succeeded_orders.append(vec_similarities[i][0]["name"])
             
     if len(failed_orders) == 0:
-        return f"Your orders for {succeeded_orders}! Your total is now {square_order.get_order_total()}."
+        return f"""Your orders for {', '.join(succeeded_orders)}! Your total is now {square_order.get_order_total()}."""
     else:
         return f"""The orders for {', '.join(succeeded_orders)} succeeded, but the orders for {', '.join(failed_orders)} failed."""
 

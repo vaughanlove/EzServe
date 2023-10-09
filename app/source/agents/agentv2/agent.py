@@ -15,6 +15,11 @@ from langchain.llms import vertexai
 from langchain.chains import LLMChain
 from langchain.agents import LLMSingleActionAgent, AgentExecutor
 
+import logging
+log = logging.getLogger("autoserve")
+#logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+
 class Agent():
     """Agent class to provide the run() entrypoint to query the llm. 
     """

@@ -1,45 +1,73 @@
 from google.cloud import texttospeech
 
 client = texttospeech.TextToSpeechClient()
+
 import pyaudio
 import wave
 
-def text_to_speech(text: str):
-    # Set the text input to be synthesized
-    synthesis_input = texttospeech.SynthesisInput(text=text)
+import sounddevice as sd
+import soundfile as sf
+from scipy.io.wavfile import write
+import threading
+import numpy as np
+import asyncio
+import sys
 
-    # Build the voice request, select the language code ("en-US") and the ssml
-    # voice gender ("neutral")
-    voice = texttospeech.VoiceSelectionParams(
-        language_code="en-US", ssml_gender=texttospeech.SsmlVoiceGender.NEUTRAL
-    )
+import logging
+log = logging.getLogger("autoserve")
+#logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
-    # Select the type of audio file you want returned
-    audio_config = texttospeech.AudioConfig(
-        audio_encoding=texttospeech.AudioEncoding.LINEAR16
-    )
+async def text_to_speech(text: str):
+        # Set the text input to be synthesized
+        synthesis_input = texttospeech.SynthesisInput(text=text)
 
-    # Perform the text-to-speech request on the text input with the selected
-    # voice parameters and audio file type
-    response = client.synthesize_speech(
-        input=synthesis_input, voice=voice, audio_config=audio_config
-    )    
+        # Build the voice request, select the language code ("en-US") and the ssml
+        # voice gender ("neutral")
+        voice = texttospeech.VoiceSelectionParams(
+            language_code="en-IN", ssml_gender=texttospeech.SsmlVoiceGender.NEUTRAL
+        )
 
-    play_wav_bytes(response.audio_content)
+        # Select the type of audio file you want returned
+        audio_config = texttospeech.AudioConfig(
+            audio_encoding=texttospeech.AudioEncoding.LINEAR16
+        )
 
-def play_wav_bytes(wav_bytes):
-    # Initialize PyAudio
-    p = pyaudio.PyAudio()
+        # Perform the text-to-speech request on the text input with the selected
+        # voice parameters and audio file type
+        response = client.synthesize_speech(
+            input=synthesis_input, voice=voice, audio_config=audio_config
+        ) 
+    
+        output_file = "app/source/audio/speaker_output.wav"
+        with wave.open(output_file, "w") as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)
+            wf.setframerate(25000)
+            wf.writeframes(response.audio_content)
+            
+        event = asyncio.Event()
+        current_frame = 0
 
-    # Open a PyAudio stream
-    stream = p.open(format=pyaudio.paInt16,
-                    channels=1,
-                    rate=25000,
-                    output=True)
-
-    # Play the audio data
-    stream.write(wav_bytes)
-
-    # Close the stream when finished
-    stream.stop_stream()
-    stream.close()
+        try:
+            with sf.SoundFile("/home/dom/Desktop/autoserve/EzServe/app/source/audio/speaker_output.wav") as f:
+                data = f.read(always_2d=True)
+                
+                current_frame = 0
+                
+                def callback(outdata, frames, time, status):
+                    nonlocal current_frame
+                    if status:
+                        print(status)
+                    chunksize = min(len(data) - current_frame, frames)
+                    outdata[:chunksize] = data[current_frame:current_frame + chunksize]
+                    if chunksize < frames:
+                        outdata[chunksize:] = 0
+                        raise sd.CallbackStop()
+                    current_frame += chunksize
+                        
+                stream = sd.OutputStream(samplerate=25000, device=2, channels=data.shape[1], callback=callback, finished_callback=event.set)
+                with stream:
+                    await event.wait()  # Wait until playback is finished
+        except Exception as e:
+             print(f"An error occured: {e}")

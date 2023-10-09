@@ -1,4 +1,4 @@
-"""Simple ChromaDB client that the Agent can easily query.
+"""Simple weaviate client that the Agent can easily query.
 Initializes with menu information from square.
 """
 from square.client import Client
@@ -15,7 +15,7 @@ logging.basicConfig(level=logging.INFO)
 
 
 class DatabaseClient(object):
-    """ Class for connecting and querying the Chroma vector database.
+    """ Class for connecting and querying the weaviate vector database.
     """
 
     def __init__(self):
@@ -33,7 +33,7 @@ class DatabaseClient(object):
             environment=os.getenv("SQUARE_ENVIRONMENT")
         )
 
-        logger.info("CHROMADB: Fetching menu from square api.")
+        logger.info("weaviate: Fetching menu from square api.")
         result = square_client.catalog.list_catalog(
             types = "ITEM"
         )
