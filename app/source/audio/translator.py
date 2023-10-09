@@ -1,23 +1,21 @@
 """For translating things to/from english.
 We want to keep everything in the backend in one language so that we 
 can always easily incorporate with any menu.
-
-TODO:
- - Add a function to translate from english to another language. 
- (this can be used for speech-to-text)
 """
 
 from google.cloud.translate_v2 import client
 
-def translate(text: str) -> object:
 
+def translate(text: str) -> object:
+    """
+    Instantiates GCloud translate client, determines input language and translates to english, returns results.
+    """
     translate_client = client.Client()
 
     if isinstance(text, bytes):
         text = text.decode("utf-8")
 
     result = translate_client.translate(text, target_language="EN")
-
 
     if result["translatedText"] is not None:
         return result["detectedSourceLanguage"], result["translatedText"]
@@ -27,7 +25,9 @@ def translate(text: str) -> object:
                 now all you need to do is prompt the customer to try again."""
     
 def translate_to_language(text: str, lang: str) -> object:
-
+    """
+    Translates to desired language.
+    """
     translate_client = client.Client()
 
     if isinstance(text, bytes):

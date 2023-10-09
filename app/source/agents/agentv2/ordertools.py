@@ -60,7 +60,10 @@ def order(
         return "order_string was not valid JSON."
     
     if text_json == None:
-        return "Cannot find the item you requested."    
+        return "Cannot find the item you requested."
+        
+    succeeded_orders = []
+    failed_orders = []    
 
     # check for content
     if len(text_json) == 0:
@@ -78,7 +81,10 @@ def order(
             print(search_string)
             augment_item = db.query(search_string)
             print(augment_item)
-            vec_similarities.append(augment_item)
+            if augment_item == []:
+                failed_orders.append(search_string) 
+            else:
+                vec_similarities.append(augment_item)
 
     print(vec_similarities)    
     if len(vec_similarities) == 0 or vec_similarities == [[]]:
@@ -89,15 +95,16 @@ def order(
     # human-in-the-loop to verify or clarify that certain item.
     # I don't think the other orders should fail, so add HITL after placing orders.
 
-    succeeded_orders = []
-    failed_orders = []
 
     for i in range(len(vec_similarities)):
         # TODO: if vector distance >= 1, reaffirm with the user what they ordered, and allow them to change.
 
         note = text_json[i]["order_note"] if "order_note" in text_json[i].keys() else ""
-        
-        if not square_order.order_ongoing:
+
+        # sanity check. can probably remove 
+        if vec_similarities[i] == []:
+            continue
+        elif not square_order.order_ongoing:
             # TODO: add error handling
             # please comment this
             success = square_order.create_order(
@@ -121,9 +128,9 @@ def order(
                 succeeded_orders.append(vec_similarities[i][0]["name"])
             
     if len(failed_orders) == 0:
-        return f"Your orders for {succeeded_orders}! Your total is now {square_order.get_order_total()}."
+        return f"""Your orders for {', '.join(succeeded_orders)}! Your total is now {square_order.get_order_total()}."""
     else:
-        return f"""The orders for {succeeded_orders} succeeded, but the orders for {failed_orders} failed."""
+        return f"""The orders for {', '.join(succeeded_orders)} succeeded, but the orders for {', '.join(failed_orders)} failed."""
 
 # Below are all the tools.
 OrderTool = Tool(
