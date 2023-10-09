@@ -1,15 +1,10 @@
-"""Order module for managing order details and interacting with the square api.
-
-TODO:
-    Add exceptions
-    Improve error handling
+"""Order class for managing order details and interacting with the square api.
 """
 
 from dotenv import load_dotenv
 import os
 from uuid import uuid4
 from square.client import Client
-import json
 
 
 class Order(object):
