@@ -36,8 +36,6 @@ def validate_and_search(input_str: str):
 
 def get_item_details(item_string: str) -> str:
     """When people are wondering about details of their dish"""
-    # try to convert the JSON string into a List[dict].
-    # if that fails, its usually just the name of an item.
         
     if item_string == None:
         return "Did not get any input from the user. Prompt the user to try again."
@@ -111,7 +109,7 @@ def order(
                     note
                 )
             if not success:
-                failed_orders.append(query_results[0]["name"])
+                failed_orders.append(query_results)
             else:
                 succeeded_orders.append(query_results[0]["name"])   
 
@@ -119,7 +117,7 @@ def order(
     if len(failed_orders) == 0:
         return f"""Your orders for {', '.join(succeeded_orders)}! Your total is now {square_order.get_order_total()}."""
     else:
-        return f"""The orders for {', '.join(succeeded_orders)} succeeded, but the orders for {', '.join(failed_orders)} failed."""
+        return f"""The orders for {', '.join(succeeded_orders)} succeeded, but the orders for {', '.join([x[0]['name'] for x in failed_orders])} failed."""
 
 # Below are all the tools.
 OrderTool = Tool(

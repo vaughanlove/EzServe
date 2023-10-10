@@ -9,16 +9,18 @@ If you want to work with the notebooks:  `pip install jupyterlab`, then  `jupyte
 
 ## TODO
 
-- [x] Make bot event loop robust.
-- [x] Custom agent class.
-- [ ] Agent/Transcription error handling.
-- [ ] Add multi-language support.
+- [ ] Add human in the loop validation
+- [ ] Further customize agent template 
 
 ## In progress
 
-- [ ] Create virtual terminal for visualizing results.
-- [ ] Documentation
-- [ ] Create custom langchain agent.
+- [x] Create virtual terminal for visualizing results.
+- [x] Documentation
+- [x] Create custom langchain agent.
+- [x] Make bot event loop robust.
+- [x] Custom agent class.
+- [x] Agent/Transcription error handling.
+- [x] Add multi-language support.
 
 ## Installation
 
