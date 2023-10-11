@@ -19,7 +19,6 @@ import asyncio
 import re
 import sys
 import os
-import glob
 import logging
 
 from scipy.io.wavfile import write
@@ -28,14 +27,16 @@ from google.cloud import texttospeech
 from dotenv import load_dotenv
 
 # Basic Logging
-logging.basicConfig(level=logging.INFO)
+#logging.basicConfig(level=logging.INFO)
 
 # DEBUG Logging
-# log = logging.getLogger("autoserve")
-# logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+log = logging.getLogger("autoserve")
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Async input event flags
 recording_flag = asyncio.Event()
+failed_record_flag = asyncio.Event()
+failed_order_flag = asyncio.Event()
 processing_flag = asyncio.Event()
 shutdown_flag = asyncio.Event()
 
@@ -50,20 +51,20 @@ class AutoServe:
 
     async def run(self):
         # Start both tasks and run them concurrently
-        record_task = asyncio.create_task(self.record())
+        execution_task = asyncio.create_task(self.order_execution())
         input_task = asyncio.create_task(self.handle_input())
 
         await input_task
-        await record_task
-        
-    async def text_to_speech(self, text: str):
+        await execution_task
+	
+    async def text_to_speech(self, path, text: str):
         # Set the text input to be synthesized
         synthesis_input = texttospeech.SynthesisInput(text=text)
 
         # Build the voice request, select the language code ("en-US") and the ssml
         # voice gender ("neutral")
         voice = texttospeech.VoiceSelectionParams(
-            language_code="en-IN", ssml_gender=texttospeech.SsmlVoiceGender.NEUTRAL
+            language_code="en-US", ssml_gender=texttospeech.SsmlVoiceGender.NEUTRAL
         )
 
         # Select the type of audio file you want returned
@@ -78,7 +79,7 @@ class AutoServe:
         ) 
 
         # write audio response to a temp output .wav file
-        with tempfile.NamedTemporaryFile(dir="app/source/audio/audio_out/", delete=True, suffix='.wav') as temp_wav_file:
+        with tempfile.NamedTemporaryFile(dir=path, delete=True, suffix='.wav') as temp_wav_file:
             temp_speaker_wav_path = temp_wav_file.name
             with wave.open(temp_speaker_wav_path, "w") as wf:
                 wf.setnchannels(1)
@@ -107,25 +108,22 @@ class AutoServe:
                             raise sd.CallbackStop()
                         current_frame += chunksize
                     # Sound device output stream
-                    stream = sd.OutputStream(samplerate=25000, device=2, channels=data.shape[1], callback=callback, finished_callback=playback.set)
+                    stream = sd.OutputStream(samplerate=25000, device=0, channels=data.shape[1], callback=callback, finished_callback=playback.set)
                     with stream:
                         await playback.wait()  # Wait until playback is finished
             except Exception as e:
                  print(f"An error occured: {e}")
         temp_wav_file.close()
         
-    async def record(self):
-        """
-        Records the customer asynchronously, saves and performs operations on transcription, outputs Agent response as well as voice output.
-        """
-        # create tempfile for audio input
-        with tempfile.NamedTemporaryFile(dir="app/source/audio/audio_in/", delete=True, suffix='.wav') as temp_wav_file:
+    async def record(self, path, event):
+	# create tempfile for audio input
+        with tempfile.NamedTemporaryFile(dir=path, delete=True, suffix='.wav') as temp_wav_file:
             temp_wav_path = temp_wav_file.name
             try:
                 with sf.SoundFile(temp_wav_path, mode='w', samplerate=self.samplerate,channels=self.channels, subtype=None) as file:
                     while True:
                         # check if recording event active
-                        while not recording_flag.is_set():
+                        while not event.is_set():
                             if shutdown_flag.is_set():
                                 sys.exit()
                             await asyncio.sleep(0.1)
@@ -135,11 +133,11 @@ class AutoServe:
                         record = asyncio.Event()
                         
                         # while recording event active, record input and write to .wav temp file
-                        while recording_flag.is_set():
+                        while event.is_set():
                             def callback(indata, frame_count, time_info, status):
                                     if status:
                                         print(status)
-                                    if not recording_flag.is_set():
+                                    if not event.is_set():
                                         loop.call_soon_threadsafe(record.set)
                                         raise sd.CallbackStop
                                     file.write(indata)
@@ -147,48 +145,81 @@ class AutoServe:
                                 await record.wait()
                         
                         # clear the recording flag for next i/o
-                        recording_flag.clear()
+                        event.clear()
                         record.clear()
                         
                         # set the processing_flag to block any initiate recording inputs.
                         processing_flag.set()
 
                         # Transcription of audio
-                        transcript = transcriber.transcribe()
+                        transcript = transcriber.transcribe(temp_wav_path)
 
                         # Translation of transcription if needed based on language
                         language, result = translator.translate(transcript)
-                        print(f"EzServe - Language Detected: {language}.")
-                        print(f"EzServe - Translation: {result}.")
             
                         # Regex translation for formatted clean result
                         clean_result = re.sub(r"[^a-zA-Z0-9\s]", "", result)
                         
                         # Execute cleaned result in agent
                         agent_response = self.agent.run(clean_result)
-                        print(f"EzServe - Console: {agent_response}")
+                        print(f"EZ-Serve CONSOLE: {agent_response}")
                         
-                        # Translate Agent Response
-                        translated_response = translator.translate_to_language(agent_response, language)
-                        print(f"EzServe - Translated Response: {translated_response}")
-                        
-                        print("<***> VIRTUAL SPEAKER <***>")
-                        # Asyncronous call speaker
-                        await self.text_to_speech(translated_response)
-                        #speaker.text_to_speech(translated_response)
-                        
-                        # Clear processing flag and final customer transcription
-                        processing_flag.clear()
                         file.truncate(0)
+                        return agent_response, language
             except Exception as e:
                 print(f"An error occured: {e}")
         # Close tempfile I/O
         temp_wav_file.close()
+		
+                
+    async def failed_order_execution(self, item):
+        """
+        Records the customer asynchronously, saves and performs operations on transcription, outputs Agent response as well as voice output.
+        """
+        print(f"EZ-Serve FAILED ORDER ITEM: {item}")
+        agent_response, language = await self.record("app/source/audio/human_input_in/", failed_record_flag)
+        
+        # Translate Agent Response
+        translated_response = translator.translate_to_language(agent_response, language)
+        
+        print("<***> EZ-Serve <***>")
+        # Asyncronous call speaker
+        await self.text_to_speech("app/source/audio/audio_out/", translated_response)
+        
+        # Clear processing flag and final customer transcription
+        processing_flag.clear()
+	
+    async def order_execution(self):
+        """
+        Records the customer asynchronously, saves and performs operations on transcription, outputs Agent response as well as voice output.
+        """
+        agent_response, language = await self.record("app/source/audio/audio_in/", recording_flag)
+        print(f"EzServe - Console: {agent_response}")
+        
+        failed_orders = agent_response.split("Failed Orders:")[-1].strip()
+        if len(failed_orders) > 0: 
+            failed_order_flag.set()
+            
+        # Translate Agent Response
+        translated_response = translator.translate_to_language(agent_response, language)
+        
+        print("<***> EZ-Serve <***>")
+        # Asyncronous call speaker
+        await self.text_to_speech("app/source/audio/audio_out/", translated_response)
+        
+        processing_flag.clear()
+        if failed_order_flag.is_set():
+            for item in failed_orders.split(', '): 
+                await self.failed_order_execution(item)
+        failed_order_flag.clear()
+        processing_flag.clear()
 
     async def handle_input(self):
         """ 
         Handle customer input using async events 
         """
+        clean_menu = ", ".join(re.findall(r"'(.*?)',\s*", self.agent.run('Can I see a Menu?')))
+        await self.text_to_speech("app/source/audio/audio_out/", f"Hello! I am EZ Serve, your artificially intelligent tableside assistant. The items on our menu are {clean_menu}")
         print("""
               Press r to record.
               Press s to stop recording.
@@ -201,18 +232,26 @@ class AutoServe:
                 shutdown_flag.set()
                 break
             elif user_input == "r":
-                if recording_flag.is_set():
-                    print("Already recording!")
-                elif processing_flag.is_set():
-                    print("Hold on, still processing the last message.")
-                elif not processing_flag.is_set() and not recording_flag.is_set():
-                    print("Starting the recording.")
-                    recording_flag.set()
+                if failed_order_flag.is_set():
+                    failed_record_flag.set()
+                else:
+                
+                    if recording_flag.is_set():
+                        print("Already recording!")
+                    elif processing_flag.is_set():
+                        print("Hold on, still processing the last message.")
+                    elif not processing_flag.is_set() and not recording_flag.is_set():
+                       print("Starting the recording.")
+                       recording_flag.set()
 
             elif user_input == "s":
                 if recording_flag.is_set():
                     print("Stopping recording!")
                     recording_flag.clear()
+                    
+                if failed_record_flag.is_set():
+                    print("Stopping recording!")
+                    failed_record_flag.clear()
 
                 elif processing_flag.is_set():
                     print("Wait for the last message to finish processing.")
@@ -244,6 +283,5 @@ class AutoServe:
         
         self.channels = 1
         self.samplerate = 44100
-        self.chunk = 1024
 
         self.agent = Agent(verbose=True)

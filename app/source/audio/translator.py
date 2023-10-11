@@ -18,6 +18,8 @@ def translate(text: str) -> object:
     result = translate_client.translate(text, target_language="EN")
 
     if result["translatedText"] is not None:
+        print(f"EZ-Serve DETECTED LANGUAGE: {result['detectedSourceLanguage']}.")
+        print(f"EZ-Serve TRANSLATED RESPONSE: {result['translatedText']}.")
         return result["detectedSourceLanguage"], result["translatedText"]
     else:
         return "en", """This is not a user input. The translation failsed
@@ -37,6 +39,7 @@ def translate_to_language(text: str, lang: str) -> object:
 
 
     if result["translatedText"] is not None:
+        print(f"EZ-Serve TRANSLATED RESPONSE: {result['translatedText']}.")
         return result["translatedText"]
     else:
         return """This is not a user input. The translation failsed
