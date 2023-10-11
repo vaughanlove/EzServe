@@ -6,6 +6,15 @@ import json
 
 from  source.agents.agentv2.database.client import DatabaseClient
 from  source.agents.agentv2.order import Order
+import source.audio.transcriber as transcriber
+
+import tempfile
+import queue
+import sys
+import asyncio
+import sounddevice as sd
+import soundfile as sf
+
 
 db = DatabaseClient()
 square_order = Order()
@@ -91,10 +100,11 @@ def order(
 
         print(query_results)
         
-        # If the query can't find the item, add that input to the failed_orders.
-        # otherwise, place the order.
         if query_results == []:
-            failed_orders.append(search_string) 
+            failed_orders.append(search_string)
+        elif len(query_results) == 2 and query_results[0]['_additional']['score'] == query_results[1]['_additional']['score']:
+            failed_orders.append(query_results)
+      
         else:
             if not square_order.order_ongoing:
                 success = square_order.create_order(
@@ -117,7 +127,16 @@ def order(
     if len(failed_orders) == 0:
         return f"""Your orders for {', '.join(succeeded_orders)}! Your total is now {square_order.get_order_total()}."""
     else:
-        return f"""The orders for {', '.join(succeeded_orders)} succeeded, but the orders for {', '.join([x[0]['name'] for x in failed_orders])} failed."""
+        return f"""The orders for {', '.join(succeeded_orders)} succeeded. Failed Orders: {', '.join([x[0]['name'] for x in failed_orders])}"""
+        
+def get_menu(text) -> str:
+    """Tool for retrieving the menu."""
+    nice_menu = []
+    for obj in square_order.menu["objects"]:
+        for variation in obj["item_data"]["variations"]:
+            temp_item = ((variation["item_variation_data"]["name"] + " " + obj["item_data"]["name"]).lower().replace(",", "").replace("(", "").replace(")", ""))
+            nice_menu.append(temp_item)
+    return f"""***RESTAURANT MENU*** {nice_menu}"""
 
 # Below are all the tools.
 OrderTool = Tool(
@@ -132,4 +151,11 @@ DescriptionTool = Tool(
     description = "This tool is for getting descriptions for an item for customers.",
     return_direct=True, # dont want order tool to get called.
     func=get_item_details,
+)
+
+MenuTool = Tool(
+    name = "get_menu_tool",
+    description = "This tool is to get a restaurant menu for customers",
+    return_direct = True,
+    func = get_menu,
 )
