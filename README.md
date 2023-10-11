@@ -1,5 +1,5 @@
 
-# Auto Serve
+# EZ-Serve
 
 To install see [Installation](#installation)
 
