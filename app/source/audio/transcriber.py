@@ -1,11 +1,15 @@
 """
 Transcriber module for transcribing wav files via Google api.
 """
-import os
+
 from google.api_core.client_options import ClientOptions
 from google.cloud.speech_v2 import SpeechClient
 from google.cloud.speech_v2.types import cloud_speech
 
+import os
+import logging
+
+logger = logging.getLogger(__name__)
 def transcribe(path: str) -> object:
     """
     Reads audio file and transcribes to text.
@@ -41,8 +45,8 @@ def transcribe(path: str) -> object:
     
     # return result transcribed results
     if len(response.results) != 0:
-        print(f"EZ-Serve TRANSCRIPTION RECEIVED: {response.results[0].alternatives[0].transcript}.")
+        logger.info(f"transcription finished: {response.results[0].alternatives[0].transcript}.")
         return response.results[0].alternatives[0].transcript
     else:
-        print("EZ-Serve EMPTY RESPONSE")
+        logger.info("the transcription was empty.")
         return "empty response"

@@ -3,6 +3,7 @@
 from langchain.tools import Tool
 
 import json
+import logging
 
 from  source.agents.agentv2.database.client import DatabaseClient
 from  source.agents.agentv2.order import Order
@@ -15,6 +16,7 @@ import asyncio
 import sounddevice as sd
 import soundfile as sf
 
+logger = logging.getLogger(__name__)
 
 db = DatabaseClient()
 square_order = Order()
@@ -73,6 +75,7 @@ def order(
     try: 
         text_json = json.loads(order_string)
     except:
+        logger.error("the structured input to OrderTool was not valid JSON.")
         return "order_string was not valid JSON."
     
     if text_json == None or order_string == None or len(text_json) == 0:
@@ -95,14 +98,13 @@ def order(
                 note = text_json[i]["order_note"]
         
         # this is the string we are going to query the vecDB with.
-        search_string = text_json[i]["item_name"] + " " + note
+        search_string = text_json[i]["item_name"]
         query_results = db.query(search_string)
-
-        print(query_results)
         
         if query_results == []:
-            failed_orders.append(search_string)
-        elif len(query_results) == 2 and query_results[0]['_additional']['score'] == query_results[1]['_additional']['score']:
+            failed_orders.append([{'name' : search_string, 'error_type' : "MISSING_ITEM"}])
+        elif len(query_results) == 2 and query_results[0]['_additional']['score'] == query_results[1]['_additional']['score'] and query_results[0]['name'] != query_results[1]['name']:
+            query_results[0]['error_type'] = "SCORE_MATCH"
             failed_orders.append(query_results)
       
         else:
@@ -119,15 +121,18 @@ def order(
                     note
                 )
             if not success:
+                query_results[0]['error_type'] = "SQUARE_CALL"
                 failed_orders.append(query_results)
             else:
                 succeeded_orders.append(query_results[0]["name"])   
 
-    # nice output to user        
-    if len(failed_orders) == 0:
-        return f"""Your orders for {', '.join(succeeded_orders)}! Your total is now {square_order.get_order_total()}."""
+    # nice output to user
+    if len(succeeded_orders) == 0 and len(failed_orders) == 0:
+        return "Nothing was picked up. Please try ordering again."
+    elif len(succeeded_orders) > 0 and len(failed_orders) == 0:
+        return f"""The orders for {', '.join(succeeded_orders)} succeeded! Your total is now ${(square_order.get_order_total() / 100):.2f}.""" 
     else:
-        return f"""The orders for {', '.join(succeeded_orders)} succeeded. Failed Orders: {', '.join([x[0]['name'] for x in failed_orders])}"""
+        return f"""Some orders failed, and we are going to ask for some clarification. Failed Orders: {json.dumps(failed_orders)}"""
         
 def get_menu(text) -> str:
     """Tool for retrieving the menu."""
@@ -137,6 +142,14 @@ def get_menu(text) -> str:
             temp_item = ((variation["item_variation_data"]["name"] + " " + obj["item_data"]["name"]).lower().replace(",", "").replace("(", "").replace(")", ""))
             nice_menu.append(temp_item)
     return f"""***RESTAURANT MENU*** {nice_menu}"""
+    
+def no_order(text) -> str:
+    """Tool for when the user doesn't order anything."""
+    return f"""You didn't order anything. Try again?"""
+    
+def get_order_items(text) -> str:
+    """Tool for getting the user's ordered items."""
+    return f""" You have ordered the following: {", ".join(square_order.get_order_items())}, with a total of ${(square_order.get_order_total() / 100):.2f}."""
 
 # Below are all the tools.
 OrderTool = Tool(
@@ -158,4 +171,18 @@ MenuTool = Tool(
     description = "This tool is to get a restaurant menu for customers",
     return_direct = True,
     func = get_menu,
+)
+
+NoOrderTool = Tool(
+    name = "no_order_tool",
+    description = "when the user doesn't order anything, or there is no input.",
+    return_direct = True,
+    func = no_order,
+)
+
+GetUserOrderTool = Tool(
+    name = "get_user_order_tool",
+    description = "When the user asks about what is in their order. Do not hallucinate.",
+    return_direct = True,
+    func = get_order_items,
 )

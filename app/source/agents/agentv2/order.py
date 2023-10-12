@@ -2,10 +2,14 @@
 """
 
 from dotenv import load_dotenv
-import os
 from uuid import uuid4
 from square.client import Client
 
+import os
+import json
+import logging 
+
+logger = logging.getLogger(__name__)
 
 class Order(object):
     """Contains all methods and information for managing a square order.
@@ -32,9 +36,7 @@ class Order(object):
         self.__init_menu()
 
     def get_order_total(self):
-        """
-        Returns the total cost of the order.
-        """
+        """Returns the total cost of the order."""
         return self.order_total_cost
 
     def get_order_items(self):
@@ -52,6 +54,7 @@ class Order(object):
             quantity (str): The amount of item to add.
             note (str): notes for that specific item order.
         """
+        
 
         # https://developer.squareup.com/explorer/square/orders-api/update-order
         body = {
@@ -69,9 +72,12 @@ class Order(object):
             },
             "idempotency_key": str(uuid4().hex),
         }
+        logger.info(f"\n Calling square order endpoint with: {json.dumps(body)}")
+
         result = self._square_client.orders.update_order(self._order_id, body)
         if result.is_success():
-            item = result.body["order"]["line_items"][self.order_version]["name"]
+            logger.info("item successfully added to order")
+            item = f'{quantity} {result.body["order"]["line_items"][self.order_version]["name"]}'
             self.order_items.append(item)
             self.order_total_cost += int(
                 result.body["order"]["line_items"][self.order_version][
@@ -81,6 +87,7 @@ class Order(object):
             self.order_version = self.order_version + 1
             return True
         else:
+            logger.error("square api update_order failed.")
             return False
 
     def create_order(self, item_id: str, quantity: str, note: str) -> bool:
@@ -106,8 +113,11 @@ class Order(object):
             },
             "idempotency_key": str(uuid4().hex),
         }
+        
+        logger.info(f"Calling square order endpoint with: {json.dumps(body)}")
         result = self._square_client.orders.create_order(body)
         if result.is_success():
+            logger.info("item successfully added to order")
             item = result.body["order"]["line_items"][0]["name"]
             self.order_ongoing = True
             self.order_items.append(item)
@@ -117,6 +127,7 @@ class Order(object):
             self._order_id = result.body["order"]["id"]
             return True
         else:
+            logger.error("square api create_order failed.")
             return False
 
     def start_checkout(self):
