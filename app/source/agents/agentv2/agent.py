@@ -9,7 +9,7 @@ Using chromaDB for the vector database.
 from source.agents.agentv2.template import template
 from source.agents.agentv2.prompt import CustomPromptTemplate
 from source.agents.agentv2.output import CustomOutputParser
-from source.agents.agentv2.ordertools import OrderTool, DescriptionTool, MenuTool
+from source.agents.agentv2.ordertools import OrderTool, DescriptionTool, MenuTool, NoOrderTool
 
 from langchain.llms import vertexai
 from langchain.chains import LLMChain
@@ -31,8 +31,7 @@ class Agent():
         # add tools you want the agent to use.
         self.tools = [
             OrderTool,
-            DescriptionTool,
-            MenuTool
+            NoOrderTool
         ]
         self.tool_names = [x.name for x in self.tools]
 

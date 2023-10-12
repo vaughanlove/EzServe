@@ -97,12 +97,11 @@ def order(
         # this is the string we are going to query the vecDB with.
         search_string = text_json[i]["item_name"] + " " + note
         query_results = db.query(search_string)
-
-        print(query_results)
         
         if query_results == []:
-            failed_orders.append(search_string)
-        elif len(query_results) == 2 and query_results[0]['_additional']['score'] == query_results[1]['_additional']['score']:
+            failed_orders.append([{'name' : search_string, 'error_type' : "MISSING_ITEM"}])
+        elif len(query_results) == 2 and query_results[0]['_additional']['score'] == query_results[1]['_additional']['score'] and query_results[0]['name'] != query_results[1]['name']:
+            query_results[0]['error_type'] = "SCORE_MATCH"
             failed_orders.append(query_results)
       
         else:
@@ -119,15 +118,18 @@ def order(
                     note
                 )
             if not success:
+                query_results[0]['error_type'] = "SQUARE_CALL"
                 failed_orders.append(query_results)
             else:
                 succeeded_orders.append(query_results[0]["name"])   
 
-    # nice output to user        
-    if len(failed_orders) == 0:
-        return f"""Your orders for {', '.join(succeeded_orders)}! Your total is now {square_order.get_order_total()}."""
+    # nice output to user
+    if len(succeeded_orders) == 0 and len(failed_orders) == 0:
+        return "Nothing was picked up. Please try ordering again."
+    elif len(succeeded_orders) > 0 and len(failed_orders) == 0:
+        return f"""Your orders for {', '.join(succeeded_orders)}! Your total is now ${(square_order.get_order_total() / 100):.2f}.""" 
     else:
-        return f"""The orders for {', '.join(succeeded_orders)} succeeded. Failed Orders: {', '.join([x[0]['name'] for x in failed_orders])}"""
+        return f"""Some orders failed, and we are going to quickly ask for some clarification. Failed Orders: {json.dumps(failed_orders)}"""
         
 def get_menu(text) -> str:
     """Tool for retrieving the menu."""
@@ -137,6 +139,10 @@ def get_menu(text) -> str:
             temp_item = ((variation["item_variation_data"]["name"] + " " + obj["item_data"]["name"]).lower().replace(",", "").replace("(", "").replace(")", ""))
             nice_menu.append(temp_item)
     return f"""***RESTAURANT MENU*** {nice_menu}"""
+    
+def no_order(text) -> str:
+    """Tool for when the user doesn't order anything."""
+    return f"""You didn't order anything. Try again?"""
 
 # Below are all the tools.
 OrderTool = Tool(
@@ -158,4 +164,11 @@ MenuTool = Tool(
     description = "This tool is to get a restaurant menu for customers",
     return_direct = True,
     func = get_menu,
+)
+
+NoOrderTool = Tool(
+    name = "no_order_tool",
+    description = "when the user doesn't order anything, or there is no input.",
+    return_direct = True,
+    func = no_order,
 )

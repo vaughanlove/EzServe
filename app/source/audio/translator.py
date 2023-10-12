@@ -39,7 +39,6 @@ def translate_to_language(text: str, lang: str) -> object:
 
 
     if result["translatedText"] is not None:
-        print(f"EZ-Serve TRANSLATED RESPONSE: {result['translatedText']}.")
         return result["translatedText"]
     else:
         return """This is not a user input. The translation failsed
