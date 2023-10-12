@@ -8,15 +8,15 @@ import wave
 import sounddevice as sd
 import soundfile as sf
 from scipy.io.wavfile import write
-import threading
 import numpy as np
+
+import threading
 import asyncio
 import sys
-
 import logging
-log = logging.getLogger("autoserve")
-#logging.basicConfig(level=logging.INFO)
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+
+logger = logging.getLogger(__name__)
+
 
 async def text_to_speech(text: str):
         # Set the text input to be synthesized
@@ -58,7 +58,7 @@ async def text_to_speech(text: str):
                 def callback(outdata, frames, time, status):
                     nonlocal current_frame
                     if status:
-                        print(status)
+                        logger.debug(status)
                     chunksize = min(len(data) - current_frame, frames)
                     outdata[:chunksize] = data[current_frame:current_frame + chunksize]
                     if chunksize < frames:
@@ -70,4 +70,4 @@ async def text_to_speech(text: str):
                 with stream:
                     await event.wait()  # Wait until playback is finished
         except Exception as e:
-             print(f"An error occured: {e}")
+             logger.error(f"An error occured: {e}")

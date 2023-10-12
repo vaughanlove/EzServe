@@ -9,21 +9,21 @@ Using chromaDB for the vector database.
 from source.agents.agentv2.template import template
 from source.agents.agentv2.prompt import CustomPromptTemplate
 from source.agents.agentv2.output import CustomOutputParser
-from source.agents.agentv2.ordertools import OrderTool, DescriptionTool, MenuTool, NoOrderTool
+from source.agents.agentv2.ordertools import OrderTool, DescriptionTool, MenuTool, NoOrderTool, GetUserOrderTool
 
 from langchain.llms import vertexai
 from langchain.chains import LLMChain
 from langchain.agents import LLMSingleActionAgent, AgentExecutor
 
 import logging
-log = logging.getLogger("autoserve")
-#logging.basicConfig(level=logging.INFO)
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+
+logger = logging.getLogger(__name__)
 
 class Agent():
     """Agent class to provide the run() entrypoint to query the llm. 
     """
     def run(self, user_input: str) -> str:
+        logger.info(f"querying the agent with: {user_input}")
         return self.agent_executor.run(user_input)
 
     def __init__(self, verbose):

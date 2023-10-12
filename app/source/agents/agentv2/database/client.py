@@ -10,8 +10,8 @@ from typing import List
 import logging
 from dotenv import load_dotenv
 
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+#logger = logging.getLogger(__name__)
+#logging.basicConfig(level=logging.INFO)
 
 
 class DatabaseClient(object):
@@ -20,12 +20,13 @@ class DatabaseClient(object):
 
     def __init__(self):
         load_dotenv()
-        logger.info("Initializing the weaviate client.")
+        #logger.debug("Initializing the weaviate client.")
         self.client = weaviate.Client(embedded_options=EmbeddedOptions())
         try:
             self.__GetData()
         except:
-            print("failed to get data. This is likely bc you are using a sandbox API when it is set to production.")
+            pass
+            #logger.error("failed to get data. This is likely bc you are using a sandbox API when it is set to production.")
 
     def __GetData(self):
         square_client = Client(
@@ -33,7 +34,7 @@ class DatabaseClient(object):
             environment=os.getenv("SQUARE_ENVIRONMENT")
         )
 
-        logger.info("weaviate: Fetching menu from square api.")
+        #logger.debug("weaviate: Fetching menu from square api.")
         result = square_client.catalog.list_catalog(
             types = "ITEM"
         )

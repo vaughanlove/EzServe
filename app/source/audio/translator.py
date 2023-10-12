@@ -5,6 +5,9 @@ can always easily incorporate with any menu.
 
 from google.cloud.translate_v2 import client
 
+import logging
+
+logger = logging.getLogger(__name__)
 
 def translate(text: str) -> object:
     """
@@ -18,8 +21,7 @@ def translate(text: str) -> object:
     result = translate_client.translate(text, target_language="EN")
 
     if result["translatedText"] is not None:
-        print(f"EZ-Serve DETECTED LANGUAGE: {result['detectedSourceLanguage']}.")
-        print(f"EZ-Serve TRANSLATED RESPONSE: {result['translatedText']}.")
+        logger.info(f"translate detected language: {result['detectedSourceLanguage']}, translated response: {result['translatedText']}")
         return result["detectedSourceLanguage"], result["translatedText"]
     else:
         return "en", """This is not a user input. The translation failsed

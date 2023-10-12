@@ -7,8 +7,7 @@ to start/stop recording, and initiates the audio processing.
 
 import source.audio.translator as translator
 import source.audio.transcriber as transcriber
-#import source.audio.speaker as speaker
-from source.agents.agentv2.agent import Agent # this import is gross
+from source.agents.agentv2.agent import Agent
 
 import sounddevice as sd
 import soundfile as sf
@@ -21,6 +20,7 @@ import re
 import sys
 import os
 import logging
+import colorlog
 import json
 
 from scipy.io.wavfile import write
@@ -28,17 +28,34 @@ from google.cloud import aiplatform
 from google.cloud import texttospeech
 from dotenv import load_dotenv
 
-# Basic Logging
-#logging.basicConfig(level=logging.INFO)
 
-# DEBUG Logging
-log = logging.getLogger("autoserve")
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+# Logging 
+logger = colorlog.getLogger()
+logger.setLevel(logging.INFO)
+
+handler = colorlog.StreamHandler()
+handler.setFormatter(
+    colorlog.ColoredFormatter(
+        "%(log_color)s%(levelname)-8s%(reset)s %(white)s%(message)s",
+        datefmt=None,
+        reset=True,
+        log_colors={
+            'DEBUG': 'cyan',
+            'INFO' : 'green',
+            'WARNING': 'yellow',
+            'ERROR' : 'red',
+            'CRITICAL': 'red,bg_white',
+        },
+        secondary_log_colors={},
+        style='%'
+    )
+)
+
+logger.addHandler(handler)
+
 
 # Async input event flags
 recording_flag = asyncio.Event()
-failed_record_flag = asyncio.Event()
-failed_order_flag = asyncio.Event()
 processing_flag = asyncio.Event()
 shutdown_flag = asyncio.Event()
 
@@ -52,6 +69,7 @@ class AutoServe:
     agent = None
 
     async def run(self):
+        logger.debug("starting task loop")
         # Start both tasks and run them concurrently
         execution_task = asyncio.create_task(self.order_execution())
         input_task = asyncio.create_task(self.handle_input())
@@ -102,31 +120,32 @@ class AutoServe:
                     def callback(outdata, frames, time, status):
                         nonlocal current_frame
                         if status:
-                            print(status)
+                            logger.debug(status)
                         chunksize = min(len(data) - current_frame, frames)
                         outdata[:chunksize] = data[current_frame:current_frame + chunksize]
                         if chunksize < frames:
                             outdata[chunksize:] = 0
                             raise sd.CallbackStop()
                         current_frame += chunksize
+                        
                     # Sound device output stream
                     stream = sd.OutputStream(samplerate=25000, device=0, channels=data.shape[1], callback=callback, finished_callback=playback.set)
                     with stream:
-                        print("about to wait")
                         playback.wait()  # Wait until playback is finished
-                        print("playback here")
+                        stream.close()
             except Exception as e:
-                 print(f"An error occured: {e}")
+                 logger.error(f"An error occured: {e}")
         temp_wav_file.close()
         
     async def record(self, path, event, **kwargs):
-	# create tempfile for audio input
+        # create tempfile for audio input
         with tempfile.NamedTemporaryFile(dir=path, delete=True, suffix='.wav') as temp_wav_file:
             temp_wav_path = temp_wav_file.name
             try:
                 with sf.SoundFile(temp_wav_path, mode='w', samplerate=self.samplerate,channels=self.channels, subtype=None) as file:
                     while True:
                         # check if recording event active
+                        # if recording is not set, then recheck every 10ms until it's activated.
                         while not event.is_set():
                             if shutdown_flag.is_set():
                                 sys.exit()
@@ -140,7 +159,7 @@ class AutoServe:
                         while event.is_set():
                             def callback(indata, frame_count, time_info, status):
                                     if status:
-                                        print(status)
+                                        logger.debug(status)
                                     if not event.is_set():
                                         loop.call_soon_threadsafe(record.set)
                                         raise sd.CallbackStop
@@ -148,19 +167,19 @@ class AutoServe:
                             with sd.InputStream(samplerate=self.samplerate, device=None,channels=self.channels, callback=callback):
                                 await record.wait()
                         
-                        # clear the recording flag for next i/o
+                        # recording is done, clear flags for next i/o
                         event.clear()
                         record.clear()
                         
-                        # set the processing_flag to block any initiate recording inputs.
+                        # set the processing_flag to block initiating any new recording inputs.
                         processing_flag.set()
 
                         # Transcription of audio
                         transcript = transcriber.transcribe(temp_wav_path)
 
-                        # Translation of transcription if needed based on language
+                        # Translation of transcription to english
                         language, result = translator.translate(transcript)
-            
+
                         # Regex translation for formatted clean result
                         clean_result = re.sub(r"[^a-zA-Z0-9\s]", "", result)
                         
@@ -170,95 +189,111 @@ class AutoServe:
                         file.truncate(0)
                         return agent_response, language
             except Exception as e:
-                print(f"An error occured: {e}")
-        # Close tempfile I/O
+                logger.error(f"An error occured: {e}")
         temp_wav_file.close()
-		
+	
+    def error_validation(self, item):
+        """function for communicating the different errors to the customer for human-in-the-loop validation.
+        
+       Args:
+            item (list): A list of the two items returned by the weaviate query, with a 'error_type' key added to the first index.
+                         These items have keys:
+                            ['_additional']['score'] - the bm25 similarity score
+                            ['name'] - name of the item in square
+                            ['item_id'] - id of the item in square (useful for ordering)
+                            ['description'] - a description of the item.
+                            ['price'] - the price of the item in cents as an integer.
+        """
+        if item[0]['error_type'] == "MISSING_ITEM":
+            self.text_to_speech("app/source/audio/audio_out/", f"Sorry, {item[0]['name']} is not on our menu. Could you please re-specify exactly what you want?")
+        elif item[0]['error_type'] == "SCORE_MATCH":
+            self.text_to_speech("app/source/audio/audio_out/", f"We arn't sure if you wanted a {item[0]['name']} or a {item[1]['name']}, could you specify?")
+        elif item[0]['error_type'] == "SQUARE_CALL":
+            self.text_to_speech("app/source/audio/audio_out/", f"Something strange happened on Square's end. We are looking into it.")	
                 
-    def failed_order_execution(self, item):
+    async def failed_order_execution(self, item):
         """
         Records the customer asynchronously, saves and performs operations on transcription, outputs Agent response as well as voice output.
+
+        Args:
+            item (list): A list of the two items returned by the weaviate query, with a 'error_type' key added to the first index.
+                         These items have keys:
+                            ['_additional']['score'] - the bm25 similarity score
+                            ['name'] - name of the item in square
+                            ['item_id'] - id of the item in square (useful for ordering)
+                            ['description'] - a description of the item.
+                            ['price'] - the price of the item in cents as an integer.
         """        
-        agent_response, language = await self.record("app/source/audio/human_input_in/", recording_flag)
+        # output to the customer what the issue is.
+        self.error_validation(item)
         
-        # note this execution is item by item, there should not be multiple items.
-        # should probably do a check to ensure there arn't more than 1 failed_order in failed orders
+        # prompt the agent
+        agent_response, language = await self.record("app/source/audio/human_input_in/", recording_flag)
+    
         failed_orders = []
         resp = agent_response.split("Failed Orders:")[0].strip()
-        print(resp)
+
         try:
             failed_orders = json.loads(agent_response.split("Failed Orders:")[-1].strip())
-            print(f"\nFailed orders: {failed_orders}\n {type(failed_orders)} \n")
         except:
-            print("there were no failed orders")
+            logger.debug("there were no failed orders")
             
         if len(failed_orders) > 0:
-            if failed_orders[0][0]['error_type'] == "MISSING_ITEM":
-                self.text_to_speech("app/source/audio/audio_out/", f"Sorry, {failed_orders[0][0]['name']} is not on our menu.")
-            elif failed_orders[0][0]['error_type'] == "SCORE_MATCH":
-                self.text_to_speech("app/source/audio/audio_out/", f"Sorry, we still arn't sure what you want.")
-                self.failed_order_execution(item)
-            elif failed_orders[0][0]['error_type'] == "SQUARE_CALL":
-                self.text_to_speech("app/source/audio/audio_out/", f"Something strange happened on Square's end. We are looking into it.")
+            self.error_validation(failed_orders[0])
         
         # Translate Agent Response
         translated_response = translator.translate_to_language(resp, language)
         
-        print(f"(failed_order_execution) - translated response: {translated_response}")
+        logger.info(f"(failed_order_execution) - translated response: {translated_response}")
         # Asyncronous call speaker
         self.text_to_speech("app/source/audio/audio_out/", translated_response)
         
-        # Clear processing flag and final customer transcription
+        # processing is done.
         processing_flag.clear()
 	
     async def order_execution(self):
         """
         Records the customer asynchronously, saves and performs operations on transcription, outputs Agent response as well as voice output.
         """
-        loop = asyncio.get_event_loop()
+        # so long as the program is running, keep this loop running.
         while not shutdown_flag.is_set():
+            # await the record function. will return a value once the user starts recording with 'r' and stops with 's'.
             agent_response, language = await self.record("app/source/audio/audio_in/", recording_flag)
             
             failed_orders = []
             resp = agent_response.split("Failed Orders:")[0].strip()
-            print(resp)
+
             try:
                 failed_orders = json.loads(agent_response.split("Failed Orders:")[-1].strip())
-                print(f"\nFailed orders: {failed_orders}\n {type(failed_orders)} \n")
             except:
-                print("there were no failed orders")    
-            # Translate Agent Response
+                logger.debug("there were no failed orders")    
+                
+            # Translate Agent Response   
             translated_response = translator.translate_to_language(resp, language)
             
             # Asyncronous call speaker
-            print(f"\n(order_execution) - translated response: {translated_response}\n" )
+            logger.info(f"(order_execution) - translated response: {translated_response}\n" )
 
             self.text_to_speech("app/source/audio/audio_out/", translated_response)
-            # initial processing done.
+            
             processing_flag.clear()
             
-            # if there was a failed order, iterate through 
-            for item in failed_orders: 
-                if item[0]['error_type'] == "MISSING_ITEM":
-                    self.text_to_speech("app/source/audio/audio_out/", f"Sorry, {item[0]['name']} is not on our menu.")
-                elif item[0]['error_type'] == "SCORE_MATCH":
-                    self.text_to_speech("app/source/audio/audio_out/", f"We arn't sure if you wanted a {item[0]['name']} or a {item[1]['name']}, could you specify?")
-                    self.failed_order_execution(item)
-                elif item[0]['error_type'] == "SQUARE_CALL":
-                    self.text_to_speech("app/source/audio/audio_out/", f"Something strange happened on Square's end. We are looking into it.")
+            # iterate through the failed orders and correct them using user validation.
+            if len(failed_orders) > 0:
+                logger.warning("Now processing failed orders")
+                for item in failed_orders: 
+                    logger.warning(f"failed order: {item}")
+                    await self.failed_order_execution(item)
             
             self.text_to_speech("app/source/audio/audio_out/", "Feel free to continue ordering, the items you've ordered are on their way.")
 
-            failed_order_flag.clear()
             processing_flag.clear()
 
     async def handle_input(self):
         """ 
         Handle customer input using async events 
         """
-        #clean_menu = ", ".join(re.findall(r"'(.*?)',\s*", self.agent.run('Can I see a Menu?')))
-        #await self.text_to_speech("app/source/audio/audio_out/", f"Hello! I am EZ Serve, your artificially intelligent tableside assistant. The items on our menu are {clean_menu}")
-        print("""
+        logger.info("""
               Press r to record.
               Press s to stop recording.
               Press k to kill.
@@ -270,30 +305,21 @@ class AutoServe:
                 shutdown_flag.set()
                 break
             elif user_input == "r":
-                #if failed_order_flag.is_set():
-                if False:
-                    failed_record_flag.set()
-                else:
-                
-                    if recording_flag.is_set():
-                        print("Already recording!")
-                    elif processing_flag.is_set():
-                        print("Hold on, still processing the last message.")
-                    elif not processing_flag.is_set() and not recording_flag.is_set():
-                       print("Starting the recording.")
-                       recording_flag.set()
+                if recording_flag.is_set():
+                    logger.warning("Already recording!")
+                elif processing_flag.is_set():
+                    logger.warning("Hold on, still processing the last message.")
+                elif not processing_flag.is_set() and not recording_flag.is_set():
+                   logger.info("Starting the recording.")
+                   recording_flag.set()
 
             elif user_input == "s":
                 if recording_flag.is_set():
-                    print("Stopping recording!")
+                    logger.info("Stopping recording!")
                     recording_flag.clear()
-                    
-                if failed_record_flag.is_set():
-                    print("Stopping recording!")
-                    failed_record_flag.clear()
 
                 elif processing_flag.is_set():
-                    print("Wait for the last message to finish processing.")
+                    logger.warning("Wait for the last message to finish processing.")
 
     def _load_env_vars(self, trace: bool) -> None:
         """ 
@@ -324,3 +350,5 @@ class AutoServe:
         self.samplerate = 44100
 
         self.agent = Agent(verbose=True)
+        self.text_to_speech("app/source/audio/audio_out/", f"Hello! I am EzServe and will be taking your order. Please ask about the menu, place orders, and request to checkout when you're done.")
+
