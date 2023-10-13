@@ -22,7 +22,15 @@ db = DatabaseClient()
 square_order = Order()
 
 def validate_and_search(input_str: str):
+    """
+    function that verifies if the requested item is in the menu and returns similar items
+
+    Args:
+        input_str (string): requested item
+    """
     text_json = {}
+
+    # convert json string to dictionary
     try: 
         text_json = json.loads(input_str)
     except:
@@ -36,6 +44,8 @@ def validate_and_search(input_str: str):
         return "Nothing to order in order_string."
     
     vec_sim = [] 
+
+    # loop through items in dictionary and append to db query
     for x in text_json.values():
         temp = x
         if isinstance(x, str):
@@ -46,11 +56,19 @@ def validate_and_search(input_str: str):
     return vec_sim
 
 def get_item_details(item_string: str) -> str:
-    """When people are wondering about details of their dish"""
+    """When people are wondering about details of their dish
+
+    Args:
+        item_string: item to query details from
+
+    Returns: 
+        item details in text string or resulting error
+    """
         
     if item_string == None:
         return "Did not get any input from the user. Prompt the user to try again."
-    
+
+    #ensure item exists
     vector_similarities = validate_and_search(item_string)
 
     # if there was nothing similar
@@ -100,7 +118,8 @@ def order(
         # this is the string we are going to query the vecDB with.
         search_string = text_json[i]["item_name"]
         query_results = db.query(search_string)
-        
+
+        # save failed order if order fails
         if query_results == []:
             failed_orders.append([{'name' : search_string, 'error_type' : "MISSING_ITEM"}])
         elif len(query_results) == 2 and query_results[0]['_additional']['score'] == query_results[1]['_additional']['score'] and query_results[0]['name'] != query_results[1]['name']:
@@ -108,21 +127,25 @@ def order(
             failed_orders.append(query_results)
       
         else:
+            # create initial order
             if not square_order.order_ongoing:
                 success = square_order.create_order(
                     query_results[0]['item_id'], # the [0] index is bc we want the most similar vector.
                     text_json[i]["quantity_ordered"],
                     note
                 )
+            # add additional items to order
             else:
                 success = square_order.add_item_to_order(
                     query_results[0]['item_id'],
                     text_json[i]["quantity_ordered"],
                     note
                 )
+            # save failed orders
             if not success:
                 query_results[0]['error_type'] = "SQUARE_CALL"
                 failed_orders.append(query_results)
+            # order success
             else:
                 succeeded_orders.append(query_results[0]["name"])   
 
@@ -135,8 +158,15 @@ def order(
         return f"""Some orders failed, and we are going to ask for some clarification. Failed Orders: {json.dumps(failed_orders)}"""
         
 def get_menu(text) -> str:
-    """Tool for retrieving the menu."""
+    """
+    Tool for retrieving the menu.
+
+    Returns:
+        Formatted string containing entire Square menu
+    """
     nice_menu = []
+
+    # parse through items in square menu and add to returning string 
     for obj in square_order.menu["objects"]:
         for variation in obj["item_data"]["variations"]:
             temp_item = ((variation["item_variation_data"]["name"] + " " + obj["item_data"]["name"]).lower().replace(",", "").replace("(", "").replace(")", ""))
