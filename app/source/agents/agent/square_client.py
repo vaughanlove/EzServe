@@ -12,9 +12,10 @@ from langchain.llms import vertexai
 
 import re
 
-class SquareClient():
-    """SquareClient class where the LLM is instantiated.
-    """
+
+class SquareClient:
+    """SquareClient class where the LLM is instantiated."""
+
     def __init__(self, verbose=True) -> bool:
         self.llm = vertexai.VertexAI(tempurature=0)
 
@@ -40,4 +41,3 @@ class SquareClient():
         res = self.agent.run(prompt)
         result = re.sub(r"[^a-zA-Z0-9\s]", "", res)
         return result
-    

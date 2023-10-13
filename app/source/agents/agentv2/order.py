@@ -7,9 +7,10 @@ from square.client import Client
 
 import os
 import json
-import logging 
+import logging
 
 logger = logging.getLogger(__name__)
+
 
 class Order(object):
     """Contains all methods and information for managing a square order.
@@ -54,7 +55,6 @@ class Order(object):
             quantity (str): The amount of item to add.
             note (str): notes for that specific item order.
         """
-        
 
         # https://developer.squareup.com/explorer/square/orders-api/update-order
         body = {
@@ -113,7 +113,7 @@ class Order(object):
             },
             "idempotency_key": str(uuid4().hex),
         }
-        
+
         logger.info(f"Calling square order endpoint with: {json.dumps(body)}")
         result = self._square_client.orders.create_order(body)
         if result.is_success():
@@ -186,7 +186,7 @@ class Order(object):
         )
 
     def __init_menu(self):
-        """ Fetch the menu from the square api.
+        """Fetch the menu from the square api.
 
         Returns:
             List of the names of menu items.

@@ -4,8 +4,8 @@ from typing import Union
 
 import re
 
-class CustomOutputParser(AgentOutputParser):
 
+class CustomOutputParser(AgentOutputParser):
     def parse(self, llm_output: str) -> Union[AgentAction, AgentFinish]:
         # Check if agent should finish
         if "Final Answer:" in llm_output:
@@ -23,6 +23,6 @@ class CustomOutputParser(AgentOutputParser):
         action = match.group(1).strip()
         action_input = match.group(2)
         # Return the action and action input
-        return AgentAction(tool=action, tool_input=action_input.strip(" ").strip('"'), log=llm_output)
-    
-    
+        return AgentAction(
+            tool=action, tool_input=action_input.strip(" ").strip('"'), log=llm_output
+        )

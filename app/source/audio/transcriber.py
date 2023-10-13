@@ -10,13 +10,15 @@ import os
 import logging
 
 logger = logging.getLogger(__name__)
+
+
 def transcribe(path: str) -> object:
     """
     Reads audio file and transcribes to text.
 
     Args:
         path (string): path to .wav audio file to transcribe to text
-    Returns: 
+    Returns:
         Transcribed audio to text string
     """
     # Instantiate Gcloud speech client
@@ -45,13 +47,15 @@ def transcribe(path: str) -> object:
         config=config,
         content=content,
     )
-    
+
     # Transcribes the audio into text
     response = client.recognize(request=request)
-    
+
     # return result transcribed results
     if len(response.results) != 0:
-        logger.info(f"transcription finished: {response.results[0].alternatives[0].transcript}.")
+        logger.info(
+            f"transcription finished: {response.results[0].alternatives[0].transcript}."
+        )
         return response.results[0].alternatives[0].transcript
     else:
         logger.info("the transcription was empty.")

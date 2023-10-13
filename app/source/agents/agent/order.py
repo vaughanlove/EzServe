@@ -181,7 +181,7 @@ class Order(object):
         )
 
     def __init_menu(self):
-        """ Fetch the menu from the square api.
+        """Fetch the menu from the square api.
 
         Returns:
             List of the names of menu items.

@@ -2,6 +2,7 @@ from langchain.agents import Tool
 from langchain.prompts import StringPromptTemplate
 from typing import List
 
+
 # Set up a prompt template
 class CustomPromptTemplate(StringPromptTemplate):
     # The template to use
@@ -20,7 +21,9 @@ class CustomPromptTemplate(StringPromptTemplate):
         # Set the agent_scratchpad variable to that value
         kwargs["agent_scratchpad"] = thoughts
         # Create a tools variable from the list of tools provided
-        kwargs["tools"] = "\n".join([f"{tool.name}: {tool.description}" for tool in self.tools])
+        kwargs["tools"] = "\n".join(
+            [f"{tool.name}: {tool.description}" for tool in self.tools]
+        )
         # Create a list of tool names for the tools provided
         kwargs["tool_names"] = ", ".join([tool.name for tool in self.tools])
         return self.template.format(**kwargs)

@@ -6,6 +6,7 @@ from typing import Optional, Type
 from pydantic import BaseModel, Field
 
 import json
+
 # import re
 
 from source.agent.order import Order
@@ -50,6 +51,7 @@ class FindItemIdSchema(BaseModel):
         make sure to include those."
     )
 
+
 class OrderSchema(BaseModel):
     item_id: str = Field(
         description="The item ID of the item being ordered. Use find_item_id_tool to \
@@ -84,8 +86,9 @@ class OrderTool(BaseTool):
 
 class MakeOrderCheckoutTool(BaseTool):
     """Tool for initiating a checkout on a square terminal."""
+
     name = "make_order_checkout"
-    description ="""For when the customer requests to checkout their order.
+    description = """For when the customer requests to checkout their order.
         **IMPORTANT** Only call this when the customer is asking to check out."""
 
     def _run(self, run_manager: Optional[CallbackManagerForToolRun] = None) -> str:
@@ -94,6 +97,7 @@ class MakeOrderCheckoutTool(BaseTool):
 
 class FindItemIdTool(BaseTool):
     """Tool for finding the square id corresponding to the natural language input item"""
+
     name = "find_item_id_tool"
     description = """This tool is for finding the item IDs corresponding to the name of a menu item.
                     Do not hallucinate.
@@ -140,11 +144,13 @@ class FindItemIdTool(BaseTool):
 
 
 class GetOrderTool(BaseTool):
-    """Tool for getting the order """
+    """Tool for getting the order"""
+
     name = "get_order_tool"
     description = """This tool is for retrieving the items in the customer's order.
                     Only call this when the customer requests, or you find 
                     appropriate."""
+
     def _run(self, run_manager: Optional[CallbackManagerForToolRun] = None) -> str:
         """Return the customer's current order"""
         return square_order.order_items

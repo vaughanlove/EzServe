@@ -9,6 +9,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 def translate(text: str) -> object:
     """
     Instantiates GCloud translate client, determines input language and translates to english, returns results.
@@ -21,13 +22,19 @@ def translate(text: str) -> object:
     result = translate_client.translate(text, target_language="EN")
 
     if result["translatedText"] is not None:
-        logger.info(f"translate detected language: {result['detectedSourceLanguage']}, translated response: {result['translatedText']}")
+        logger.info(
+            f"translate detected language: {result['detectedSourceLanguage']}, translated response: {result['translatedText']}"
+        )
         return result["detectedSourceLanguage"], result["translatedText"]
     else:
-        return "en", """This is not a user input. The translation failsed
+        return (
+            "en",
+            """This is not a user input. The translation failsed
                 and no output was found. **important** 
-                now all you need to do is prompt the customer to try again."""
-    
+                now all you need to do is prompt the customer to try again.""",
+        )
+
+
 def translate_to_language(text: str, lang: str) -> object:
     """
     Translates to desired language.
@@ -38,7 +45,6 @@ def translate_to_language(text: str, lang: str) -> object:
         text = text.decode("utf-8")
 
     result = translate_client.translate(text, target_language=lang)
-
 
     if result["translatedText"] is not None:
         return result["translatedText"]

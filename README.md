@@ -18,12 +18,25 @@ Your AI server! Built for the Square + Google AI hackathon. Everything is intend
 
 ## Architecture
 ## Installation
-### pip
+### linux
 
-1. ```pip install virtualenv```
-2. `virtualenv venv`
-3. Windows: `venv/Scripts/activate`, Linux: `source venv/bin/activate`
-4. `pip install -r requirements.txt`
+1. initialize `.env` with env variables (example at .env.sample) 
+2. ```pip install virtualenv```
+3. `virtualenv venv`
+4. `source venv/bin/activate`
+5. `pip install -r requirements.txt`
+
+
+### windows
+
+<b>audio is not supported on windows. you can still place orders to square via text in main.py</b>
+
+1. initialize `.env` with env variables (example at .env.sample) 
+2. ```git clone https://github.com/vaughanlove/EzServe```
+3. Switch to `windows` branch
+4. ```python3 -m venv venv```
+5. ```.\venv\Scripts\activate```
+6. ```python3 -m pip install -r .\requirements.txt```
 
 ## Run 
 
