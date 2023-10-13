@@ -13,6 +13,11 @@ logger = logging.getLogger(__name__)
 def transcribe(path: str) -> object:
     """
     Reads audio file and transcribes to text.
+
+    Args:
+        path (string): path to .wav audio file to transcribe to text
+    Returns: 
+        Transcribed audio to text string
     """
     # Instantiate Gcloud speech client
     client = SpeechClient(
@@ -33,6 +38,7 @@ def transcribe(path: str) -> object:
         model="chirp",
     )
 
+    # Generate speech recognizer request
     project_id = os.getenv("GOOGLE_PROJECT_ID")
     request = cloud_speech.RecognizeRequest(
         recognizer=f"projects/{project_id}/locations/us-central1/recognizers/_",
