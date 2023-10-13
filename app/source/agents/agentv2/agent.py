@@ -42,13 +42,13 @@ class Agent():
             # This omits the `agent_scratchpad`, `tools`, and `tool_names` variables because those are generated dynamically
             input_variables=["input", "intermediate_steps"]
         )
-            
-        self.output_parser = CustomOutputParser()
 
+        # define LLM parameters
+        self.output_parser = CustomOutputParser()
         self.llm = vertexai.VertexAI(tempurature=0)
         self.llm_chain = LLMChain(llm=self.llm, prompt=self.prompt)
 
-        
+        # configure LLM agent
         self.agent = LLMSingleActionAgent(
             llm_chain=self.llm_chain,
             output_parser=self.output_parser,
@@ -56,6 +56,7 @@ class Agent():
             allowed_tools=self.tool_names
         )
 
+        # configure agent execution
         self.agent_executor = AgentExecutor.from_agent_and_tools(
             agent=self.agent,
             tools=self.tools,
