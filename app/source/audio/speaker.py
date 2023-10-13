@@ -19,6 +19,13 @@ logger = logging.getLogger(__name__)
 
 
 async def text_to_speech(text: str):
+        """
+        Synthesizes speech from text and produces audio playback
+
+        Args:
+            text (string): text to synthesize speech from
+        """
+        
         # Set the text input to be synthesized
         synthesis_input = texttospeech.SynthesisInput(text=text)
 
