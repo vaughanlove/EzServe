@@ -69,6 +69,9 @@ class AutoServe:
     agent = None
 
     async def run(self):
+	"""
+	Starts asyncio tasks to concurrently handle background events and user input
+ 	"""
         logger.debug("starting task loop")
         # Start both tasks and run them concurrently
         execution_task = asyncio.create_task(self.order_execution())
@@ -76,8 +79,17 @@ class AutoServe:
 
         await input_task
         await execution_task
-	
+	    
+
     def text_to_speech(self, path, text: str):
+	"""
+	Synthesizes speech from text and produces audio play back 
+
+	Args:	
+ 	    path (string): Path to .wav file to write synthesized speech to
+
+            text (string): text to synthesize to speech
+	"""
         # Set the text input to be synthesized
         synthesis_input = texttospeech.SynthesisInput(text=text)
 
@@ -138,6 +150,14 @@ class AutoServe:
         temp_wav_file.close()
         
     async def record(self, path, event, **kwargs):
+    	"""
+     	Asynchronously starts and stops audio recording and writes audio to temporary .wav file
+
+	Args:
+ 	    path (string): path to temporary .wav file to write audio recording to
+
+	    event (flag): asynchronous state handler to track when to start and stop recording
+     	"""
         # create tempfile for audio input
         with tempfile.NamedTemporaryFile(dir=path, delete=True, suffix='.wav') as temp_wav_file:
             temp_wav_path = temp_wav_file.name
