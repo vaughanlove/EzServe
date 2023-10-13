@@ -5,7 +5,7 @@ Entrypoint for the app.
 from source import autoserve
 import asyncio
 
-#verbose here is referring to the langchain AgentExecutor logic.
+# enable verbose to see agent thoughts.
 server = autoserve.AutoServe(verbose=True)
 
 #server.agent.run("I would like a small milkshake")

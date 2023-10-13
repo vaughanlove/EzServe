@@ -369,6 +369,6 @@ class AutoServe:
         self.channels = 1
         self.samplerate = 44100
 
-        self.agent = Agent(verbose=True)
+        self.agent = Agent(verbose)
         self.text_to_speech("app/source/audio/audio_out/", f"Hello! I am EzServe and will be taking your order. Please ask about the menu, place orders, and request to checkout when you're done.")
 
