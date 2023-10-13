@@ -13,17 +13,51 @@ Your AI server! Built for the Square + Google AI hackathon. Everything is intend
 - switch text-to-speech to something more natural (https://coqui.ai/?)
 - use whisper.cpp for local transcription. (faster, if possible)
 - Further optimize the agent's prompt/template.
+- Predictive Analytics & Demand Forecasting
 
-## Challenges we faced
+## Challenges
+Throughout the past two months, our team faced countless challenges during our software development life cycle leading to hours of debugging and hair wrenching moments. Listed below are many of the software and hardware challenges we encountered during the development process, these include:
+* 
+*
+- was initially doing a bunch of regex and brute-forcing a list to find order items
+- upgraded to a vectordb.
+- was having a bunch of issues minimizing the amount of text going through the LLM
+- changed to a custom agent framework so I could batch calls.
+- Was having issue when the program couldn't understand the user (for whatever reason)
+- added human-in-the-loop validation
+- Mapping windows ports to unix ports.
+
 
 ## Architecture
-## Installation
-### pip
 
-1. ```pip install virtualenv```
-2. `virtualenv venv`
-3. Windows: `venv/Scripts/activate`, Linux: `source venv/bin/activate`
-4. `pip install -r requirements.txt`
+### Current State - High Level Architecture
+<img src="ezserve-current-state-diagram.png" height="400">
+
+#### EZ-Serve Agent
+
+### Ultimate Concept - High Level Architecture
+<img src="ezserve-ultimate-state-diagram.png" height="400">
+
+
+## Installation - Linux
+
+1. initialize `.env` with env variables (example at .env.sample) 
+2. ```pip install virtualenv```
+3. `virtualenv venv`
+4. `source venv/bin/activate`
+5. `pip install -r requirements.txt`
+
+
+## Installation - Windows
+
+<b>audio is not supported on windows. you can still place orders to square via text in main.py</b>
+
+1. initialize `.env` with env variables (example at .env.sample) 
+2. ```git clone https://github.com/vaughanlove/EzServe```
+3. Switch to `windows` branch
+4. ```python3 -m venv venv```
+5. ```.\venv\Scripts\activate```
+6. ```python3 -m pip install -r .\requirements.txt```
 
 ## Run 
 
