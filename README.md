@@ -16,15 +16,15 @@ Your AI server! Built for the Square + Google AI hackathon. Everything is intend
 - Predictive Analytics & Demand Forecasting
 
 ## Challenges
-Throughout the past two months, our team faced countless challenges during our software development life cycle leading to hours of debugging and hair wrenching moments. Listed below are many of the software and hardware challenges we encountered during the development process, these include:
+We encountered many challenges throughout development. Listed below are many of the software and hardware challenges we encountered during the development process, these include:
 * 
 *
-- was initially doing a bunch of regex and brute-forcing a list to find order items
-- upgraded to a vectordb.
+- initially was doing a bunch of regex and brute-forcing a list to find order items
+  - upgraded to a vectordb.
 - was having a bunch of issues minimizing the amount of text going through the LLM
-- changed to a custom agent framework so I could batch calls.
-- Was having issue when the program couldn't understand the user (for whatever reason)
-- added human-in-the-loop validation
+  - changed to a custom agent framework to batch order calls.
+- Was having issue when the program couldn't understand the user
+  - added human-in-the-loop validation
 - Mapping windows ports to unix ports.
 
 
