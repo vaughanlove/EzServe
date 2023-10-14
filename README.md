@@ -22,8 +22,8 @@ We encountered many challenges throughout development. Listed below are many of 
 - Many of issues minimizing the amount of text going through the LLM
   - changed to a custom agent framework to batch order calls.
 - Langchain agent prompt has a character limit.
-- Issue where the program couldn't understand the user.
-  - added human-in-the-loop validation
+- The first version of the agent would call order_tool for each individual item, this was an inefficient use of LLM calls so we converted order_tool to accept a list of items. This drastically improved the speed of the program and lowered calls.
+- We realized that any agent that has to interact with humans is going to encounter plenty of edge cases that we didn’t have the time to exhaust, so we implemented plenty of error checking, and eventually saw the need for human-in-the-loop validation
 - Mapping windows ports to unix ports.
 - Unable to test Square Webhooks using zapier without production account.
 - ALSA audio configuration was painful.
