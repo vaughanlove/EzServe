@@ -44,18 +44,21 @@ We encountered many challenges throughout development. Listed below are many of 
 
 ## Installation - Linux
 
-1. initialize `.env` with env variables (example at .env.sample) 
+<b>NOTE: The project submission runs off a Raspberry Pi 4 with specific ALSA audio configuration.</b>
+
+1. From EZ-Serve root folder, initialize `.env` with env variables (example at .env.sample) 
 2. ```pip install virtualenv```
 3. `virtualenv venv`
 4. `source venv/bin/activate`
 5. `pip install -r requirements.txt`
+6. Proceed to <b>Run</b> and follow instructions. If any erros related to audio arise, device configuration may be required for the specific OS. To resolve, query audio sinks/sources, determine audio protocol and configure for desired OS.
 
 
 ## Installation - Windows
 
-<b>audio is not supported on windows. you can still place orders to square via text in main.py</b>
+<b>NOTE: audio is not supported on windows. you can still place orders to square via text in main.py</b>
 
-1. initialize `.env` with env variables (example at .env.sample) 
+1. From EZ-Serve root folder, initialize `.env` with env variables (example at .env.sample) 
 2. ```git clone https://github.com/vaughanlove/EzServe```
 3. Switch to `windows` branch
 4. ```python3 -m venv venv```
