@@ -251,7 +251,11 @@ class AutoServe:
         agent_response, language = await self.record("app/source/audio/human_input_in/", recording_flag)
     
         failed_orders = []
-        resp = agent_response.split("Failed Orders:")[0].strip()
+        try:
+            resp = agent_response.split("Failed Orders:")[0].strip()
+        except:
+            logger.error("there was no response")
+                
 
         try:
             failed_orders = json.loads(agent_response.split("Failed Orders:")[-1].strip())

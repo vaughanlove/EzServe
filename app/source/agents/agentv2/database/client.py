@@ -59,5 +59,5 @@ class DatabaseClient(object):
                     self.client.data_object.create(data_obj, "menu_item")
                     
     def query(self, item: List[str]):
-        res =  self.client.query.get("menu_item", ["name", "item_id", "price"]).with_bm25(query=item, properties=["name"]).with_additional("score").with_limit(2).do()
+        res =  self.client.query.get("menu_item", ["name", "item_id", "price", "description"]).with_bm25(query=item, properties=["name"]).with_additional("score").with_limit(2).do()
         return res['data']['Get']['Menu_item']

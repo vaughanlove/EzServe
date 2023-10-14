@@ -2,14 +2,14 @@
 This approach significantly lowered the # of calls to the LLM,
 and increased the amount of information we can convey to the business through `note`.
 
-Using chromaDB for the vector database.
+Using weaviate for the vector database.
 """
 
 
 from source.agents.agentv2.template import template
 from source.agents.agentv2.prompt import CustomPromptTemplate
 from source.agents.agentv2.output import CustomOutputParser
-from source.agents.agentv2.ordertools import OrderTool, DescriptionTool, MenuTool, NoOrderTool, GetUserOrderTool
+from source.agents.agentv2.ordertools import OrderTool, DescriptionTool, MenuTool, NoOrderTool, GetUserOrderTool, OrderCheckoutTool
 
 from langchain.llms import vertexai
 from langchain.chains import LLMChain
@@ -31,7 +31,9 @@ class Agent():
         # add tools you want the agent to use.
         self.tools = [
             OrderTool,
-            NoOrderTool
+            NoOrderTool,
+            DescriptionTool,
+            OrderCheckoutTool
         ]
         self.tool_names = [x.name for x in self.tools]
 
