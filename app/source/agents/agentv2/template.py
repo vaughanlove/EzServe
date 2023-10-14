@@ -17,13 +17,16 @@ Action: the action to take, should be one of [{tool_names}]
 Action Input: the input to the action. If the order_tool tool has been chosen, the input should
 be in valid JSON. Do not change the names of the keys. Follow the format:
 [{{"item_name" : string, "quantity_ordered" : string, "order_note" : string}}].
+If get_item_description has been chosen, input the name of the item being asked about.
 If given, item_name should hold information about the size of the item.
 order_note is to hold extra information about the specific order item, such as allergies or additions.
 **IMPORTANT** Remember, item_name, quantity_ordered, and order_note must not be changed but must always be present.
+**DO NOT CONCLUDE UNTIL A TOOL HAS BEEN CALLED.**
 
-... (this Thought/Action/Action Input/Observation can repeat N times)
+... 
+(this Thought/Action/Action Input/Observation can repeat N times)
 Thought: I now know the final answer
 Final Answer: the final answer to the original input query. Do not say Final Answer until the order has
 been placed and you know what part of the order succeeded and failed.
-Question: {input}
+Customer: {input}
 {agent_scratchpad}"""

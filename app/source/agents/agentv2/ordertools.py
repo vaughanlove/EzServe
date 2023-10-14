@@ -52,7 +52,7 @@ def get_item_details(item_string: str) -> str:
         return "Did not get any input from the user. Prompt the user to try again."
     
     vector_similarities = validate_and_search(item_string)
-
+    print(vector_similarities)
     # if there was nothing similar
     if len(vector_similarities) == 0 or vector_similarities == [[]]:
         return "there were no dishes similar to the ones you requested."
@@ -87,7 +87,7 @@ def order(
     succeeded_orders = []
 
     for i in range(len(text_json)):
-        # empty note by default
+        # empty note by default 
         note = ""
         # LLM hopefully correctly formatted and created a "order_note" field.
         if "order_note" in text_json[i].keys():
@@ -132,8 +132,11 @@ def order(
     elif len(succeeded_orders) > 0 and len(failed_orders) == 0:
         return f"""The orders for {', '.join(succeeded_orders)} succeeded! Your total is now ${(square_order.get_order_total() / 100):.2f}.""" 
     else:
-        return f"""Some orders failed, and we are going to ask for some clarification. Failed Orders: {json.dumps(failed_orders)}"""
-        
+        if len(succeeded_orders) > 0:
+            return f"""Your orders for {', '.join(succeeded_orders)}, succeeded. Your orders for {', '.join([x[0]['name'] for x in failed_orders])} failed, and we are going to ask for some clarification. Failed Orders: {json.dumps(failed_orders)}"""
+        else:
+            return f"""Your orders for {', '.join([x[0]['name'] for x in failed_orders])} failed, and we are going to ask for some clarification. Failed Orders: {json.dumps(failed_orders)}"""
+
 def get_menu(text) -> str:
     """Tool for retrieving the menu."""
     nice_menu = []
@@ -151,6 +154,14 @@ def get_order_items(text) -> str:
     """Tool for getting the user's ordered items."""
     return f""" You have ordered the following: {", ".join(square_order.get_order_items())}, with a total of ${(square_order.get_order_total() / 100):.2f}."""
 
+
+def checkout(text) -> str:
+    success = square_order.start_checkout()
+    if success:
+        return "Thanks for dining with us!"
+    else:
+        return "Checkout failed."
+
 # Below are all the tools.
 OrderTool = Tool(
     name = "order_tool",
@@ -160,8 +171,8 @@ OrderTool = Tool(
 )
 
 DescriptionTool = Tool(
-    name = "get_item_details",
-    description = "This tool is for getting descriptions for an item for customers.",
+    name = "get_item_description",
+    description = "This tool is for describing items to customers.",
     return_direct=True, # dont want order tool to get called.
     func=get_item_details,
 )
@@ -185,4 +196,11 @@ GetUserOrderTool = Tool(
     description = "When the user asks about what is in their order. Do not hallucinate.",
     return_direct = True,
     func = get_order_items,
+)
+
+OrderCheckoutTool = Tool(
+    name="make_order_checkout",
+    description="""For when the customer requests to checkout their order.**IMPORTANT** Only call this when the customer is asking to check out.""",
+    return_direct=True,
+    func=checkout
 )
