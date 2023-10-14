@@ -17,15 +17,21 @@ Your AI server! Built for the Square + Google AI hackathon. Everything is intend
 
 ## Challenges
 We encountered many challenges throughout development. Listed below are many of the software and hardware challenges we encountered during the development process, these include:
-* 
-*
-- initially was doing a bunch of regex and brute-forcing a list to find order items
+- Initially we performed a bunch of regex and brute-forced a list to find order items
   - upgraded to a vectordb.
-- was having a bunch of issues minimizing the amount of text going through the LLM
+- Many of issues minimizing the amount of text going through the LLM
   - changed to a custom agent framework to batch order calls.
-- Was having issue when the program couldn't understand the user
+- Langchain agent prompt has a character limit.
+- Issue where the program couldn't understand the user.
   - added human-in-the-loop validation
 - Mapping windows ports to unix ports.
+- Unable to test Square Webhooks using zapier without production account.
+- ALSA audio configuration was painful.
+- Raspberry pi has a maximum power ouput
+  - can't use a 70" tv as a monitor lol
+- Difficulties outputting audio from .wav files
+  - Some things work, and dont work, in Python. Everything, mostly, works in Python3.
+- Geany IDE doesn't like the simultaneous use of spaces and tabs.
 
 
 ## Architecture
@@ -33,11 +39,8 @@ We encountered many challenges throughout development. Listed below are many of 
 ### Current State - High Level Architecture
 <img src="ezserve-current-state-diagram.png" height="400">
 
-#### EZ-Serve Agent
-
 ### Ultimate Concept - High Level Architecture
 <img src="ezserve-ultimate-state-diagram.png" height="400">
-
 
 ## Installation - Linux
 
