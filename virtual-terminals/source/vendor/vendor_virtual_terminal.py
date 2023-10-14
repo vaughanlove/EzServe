@@ -5,11 +5,12 @@ import random
 import re
 
 from square.client import Client
-
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 
+# Instantiate Square API Client. 
+""" note: Must have SQUARE_ACCESS_TOKEN environment variable exported"""
 client = Client(
     square_version='2023-08-16',
     access_token=os.environ['SQUARE_ACCESS_TOKEN'],
@@ -17,6 +18,11 @@ client = Client(
     max_retries=4
     )
 
+"""
+QT Vendor Order Terminal
+------------------------
+Aggregates all SQUARE API Order details for restaurant viewing.
+"""
 class OrderTerminal(QWidget):
     def __init__(self, order_id):
         super().__init__()
@@ -78,11 +84,15 @@ class OrderTerminal(QWidget):
         # SQUARE Retrieve Order API
         order = self.retrieve_order()
         for item in order.body["order"]["line_items"]:
-            order_Item = QListWidgetItem(str(item["quantity"]) + " x " + item["name"] + " -   " + str(item["base_price_money"]["amount"]) + " " + item["base_price_money"]["currency"])
+            order_Item = QListWidgetItem(str(item["quantity"]) + " x " + item["variation_name"] + " " + item["name"] + " -   " + str(item["base_price_money"]["amount"]) + " " + item["base_price_money"]["currency"])
             self.order_items.addItem(order_Item)
         self.order_items.update()
 
-
+"""
+QT Vendor Order Terminal
+------------------------
+Aggregates all orders processed at a specific location specified by the Square API.
+"""
 class VendorTerminal(QWidget):
 
     def __init__(self):

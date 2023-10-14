@@ -1,14 +1,14 @@
 import os
 import sys
 import json
-#import qrcode
 
 from square.client import Client
-
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 
+# Instantiate Square API Client. 
+""" note: Must have SQUARE_ACCESS_TOKEN environment variable exported"""
 client = Client(
     square_version='2023-08-16',
     access_token=os.environ['SQUARE_ACCESS_TOKEN'],
@@ -16,41 +16,54 @@ client = Client(
     max_retries=4
     )
 
+"""
+QT Customer Checkout Window
+---------------------------
+GUI with list of order items, total bill, and payment button.
+"""
 class CheckoutWindow(QWidget):
 
     def __init__(self):
         super().__init__()
         self.setWindowTitle("EzServe - Checkout")
         self.resize(450, 300)
+        # define layout type
         checkout_layout = QGridLayout()
 
         # SQUARE Order API
-        # retrieve hard-coded order ID
+        # Retrieve last order by location
+        # Note: In production implementation, this would include device ID.
         self.o_id = get_last_order_by_location(self)
         order = client.orders.retrieve_order(order_id = self.o_id)
 
+        # Define list widget for Order items
         checkout_items = QListWidget()
 
+        #Define dummy Pay Button - would direct customer to payment processing in production ie have an nfc readers
         self.payment_btn = QPushButton("PAY")
+        self.payment_btn.clicked.connect(self.payment_processing) # currently kills app processing execution on activation
 
-        self.payment_btn.clicked.connect(self.payment_processing)
-
+        # define order total
         total = 0
-
+        #For all items in the order retrieved, add them and selected metadata to list widget.
         for item in order.body["order"]["line_items"]:
-                order_Item = QListWidgetItem(str(item["quantity"]) + " x " + item["name"] + " -   " + str(item["base_price_money"]["amount"]) + " " + item["base_price_money"]["currency"])
+                order_Item = QListWidgetItem(str(item["quantity"]) + " x " + item["variation_name"] + " " + item["name"] + " -   " + str(item["base_price_money"]["amount"]) + " " + item["base_price_money"]["currency"])
                 checkout_items.addItem(order_Item)
                 currency = str(item["base_price_money"]["currency"])
                 total += int(item["base_price_money"]["amount"])
 
+        # instantiate label and assign chckout totoal
         self.checkout_total = QLabel("TOTAL (" + currency + ") - " + str(total))
         self.checkout_total.setStyleSheet("font-weight: bold")
 
+
+        # Add widgets to QT layout
         checkout_layout.addWidget(checkout_items, 0, 0)
         checkout_layout.addWidget(self.checkout_total, 1, 0)
         checkout_layout.addWidget(self.payment_btn, 2, 0)
         self.setLayout(checkout_layout)
 
+    # Custom function using the Square terminal checkout API
     def get_terminal_checkout(self, c_id):
         result = client.terminal.get_terminal_checkout(checkout_id = c_id)
 
@@ -62,10 +75,19 @@ class CheckoutWindow(QWidget):
 
         return order['checkout']['note']
 
+    # Kill's widget process onClick of 'PAY' button
     def payment_processing(self):
         sys.exit(app.exec_())
 
-
+"""
+QT Customer Main Virtual Terminal Window
+----------------------------------------
+GUI for active customer order, shows order status, and order items. 
+Can be updated once EZ-Serve processes order through Square network.
+FUTURE TO-DO: webhooks for live updates
+Meant to emulate the screen on our square concept device.
+In current state, it represents a virtual screen for our EZ-Serve hardware being the raspberry pi 4.
+"""
 class Terminal(QWidget):
 
     def __init__(self):
@@ -106,10 +128,10 @@ class Terminal(QWidget):
     def update_order(self):
         # SQUARE Retrieve Order API
         order = self.retrieve_order()
-
+        #Update order by searching for all order items and updating list component
         self.order_items.clear()
         for item in order.body["order"]["line_items"]:
-            order_Item = QListWidgetItem(str(item["quantity"]) + " x " + item["name"] + " -   " + str(item["base_price_money"]["amount"]) + " " + item["base_price_money"]["currency"])
+            order_Item = QListWidgetItem(str(item["quantity"]) + " x " + item["variation_name"] + " " + item["name"] + " -   " + str(item["base_price_money"]["amount"]) + " " + item["base_price_money"]["currency"])
             self.order_items.addItem(order_Item)
         self.order_items.update()
 
@@ -117,7 +139,7 @@ class Terminal(QWidget):
         # SQUARE Retrieve Order API
         order = self.retrieve_order()
         status = str(order.body["order"]["state"])
-
+        # display banner color based on order status
         # if status == "OPEN":
         #     self.order_status.setStyleSheet("background: green; font-weight: bold")
         # elif status == "PENDING":
